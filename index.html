@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>企业网络攻防对抗 · SOC Defense</title>
+<style>
+:root{
+  --bg:#080e1a; --panel:#0f1a2e; --panel2:#152541; --line:#1e3350;
+  --txt:#e6edf6; --muted:#8098b8; --accent:#ffd166;
+  --ok:#4cd964; --warn:#ff9f43; --bad:#ff4d6d;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  overflow:hidden;user-select:none;}
+#app{display:flex;flex-direction:column;height:100vh;}
+
+/* ============ 顶部 HUD ============ */
+header{display:flex;align-items:center;gap:14px;padding:8px 14px;
+  background:linear-gradient(90deg,#0c1526,#122239);border-bottom:1px solid var(--line);
+  flex:none;flex-wrap:wrap;}
+.brand{font-size:15px;font-weight:800;letter-spacing:.5px;white-space:nowrap;}
+.brand .sub{font-size:10px;color:var(--muted);font-weight:400;margin-left:6px;}
+.hud{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:4px 10px;font-size:11px;white-space:nowrap;}
+.chip b{font-size:14px;color:var(--accent);}
+.bar{width:130px;height:9px;background:#0a1424;border:1px solid var(--line);
+  border-radius:6px;overflow:hidden;margin-top:3px;}
+.bar i{display:block;height:100%;transition:width .18s;}
+.hp .bar i{background:linear-gradient(90deg,#ff4d6d,#ff9f43);}
+.ap .bar i{background:linear-gradient(90deg,#2bd9c9,#4cd964);}
+.tools{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;}
+.tools button{padding:5px 10px;border-radius:7px;border:1px solid var(--line);
+  background:var(--panel);color:var(--txt);cursor:pointer;font-size:11px;transition:.15s;}
+.tools button:hover{border-color:var(--accent);color:var(--accent);}
+.tools button.on{background:var(--accent);color:#0b1220;border-color:var(--accent);}
+
+/* ============ 主体 ============ */
+main{flex:1;display:flex;min-height:0;}
+#stage{flex:1;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 25% 12%,#101f38 0,#080e1a 62%);}
+#stage.hurt{animation:hurt .32s;}
+@keyframes hurt{0%{box-shadow:inset 0 0 0 0 rgba(255,77,109,0);}
+  40%{box-shadow:inset 0 0 90px 12px rgba(255,77,109,.5);}100%{box-shadow:inset 0 0 0 0 rgba(255,77,109,0);}}
+svg{width:100%;height:100%;display:block;cursor:crosshair;}
+svg.grabbing{cursor:grabbing;}
+
+.zone-band{fill:rgba(255,255,255,.014);stroke:var(--line);stroke-width:1;stroke-dasharray:5 7;}
+.zone-label{fill:#6d87a8;font-size:12px;font-weight:700;letter-spacing:1px;}
+.edge{stroke:#243a58;stroke-width:1.4;fill:none;}
+.edge.live{stroke:#3f5c85;stroke-width:1.8;}
+
+.node{cursor:pointer;}
+.node-box{fill:var(--panel2);stroke-width:1.6;transition:fill .12s,stroke .12s;}
+.node:hover .node-box{fill:#1c3055;}
+.node-icon{font-size:23px;text-anchor:middle;dominant-baseline:central;}
+.node-label{font-size:15px;font-weight:700;fill:var(--txt);dominant-baseline:central;}
+.node-tag{font-size:10px;fill:#7f96b6;dominant-baseline:central;}
+.node-badge{font-size:16px;text-anchor:middle;dominant-baseline:central;}
+.node.valid .node-box{stroke-width:3.4;}
+.node.valid{animation:pulseV 1.1s ease-in-out infinite;}
+@keyframes pulseV{0%,100%{opacity:1;}50%{opacity:.62;}}
+.node.locate .node-box{stroke:#fff;stroke-width:4;}
+
+/* 攻击图层 */
+.atk-path{stroke-width:2.4;fill:none;stroke-dasharray:8 7;opacity:.5;
+  animation:dash 1.1s linear infinite;}
+@keyframes dash{to{stroke-dashoffset:-15;}}
+.atk-halo{opacity:.22;animation:halo 1.15s ease-in-out infinite;}
+@keyframes halo{0%,100%{r:15;opacity:.28;}50%{r:24;opacity:.06;}}
+.atk-dot{stroke:#fff;stroke-width:2;}
+.atk-txt{font-size:12px;font-weight:700;text-anchor:middle;dominant-baseline:central;
+  fill:#fff;paint-order:stroke;stroke:#000;stroke-width:3.5;}
+.locate-ring{fill:none;stroke:#fff;stroke-width:3;}
+
+#tip{position:absolute;pointer-events:none;background:rgba(8,14,26,.97);
+  border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;
+  line-height:1.55;max-width:250px;z-index:20;display:none;box-shadow:0 8px 26px rgba(0,0,0,.6);}
+#tip .t{font-weight:700;font-size:13px;margin-bottom:3px;}
+#tip .vk{color:var(--warn);}
+#tip .vs{color:var(--ok);}
+#toast{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:25;
+  display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;}
+.toast{background:rgba(12,22,40,.97);border:1px solid var(--line);border-radius:8px;
+  padding:7px 15px;font-size:12.5px;animation:tin .25s;box-shadow:0 6px 20px rgba(0,0,0,.5);}
+.toast.warn{border-color:var(--warn);color:var(--warn);}
+.toast.ok{border-color:var(--ok);color:var(--ok);}
+.toast.bad{border-color:var(--bad);color:var(--bad);}
+@keyframes tin{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+#phaseTag{position:absolute;top:12px;left:14px;z-index:15;font-size:12px;
+  padding:5px 12px;border-radius:20px;border:1px solid var(--line);
+  background:rgba(12,22,40,.9);pointer-events:none;}
+#phaseTag.prep{border-color:var(--ok);color:var(--ok);}
+#phaseTag.wave{border-color:var(--bad);color:var(--bad);animation:pulseV 1.2s infinite;}
+
+/* ============ 右侧栏 ============ */
+aside{width:344px;flex:none;background:var(--panel);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;}
+.sec{border-bottom:1px solid var(--line);display:flex;flex-direction:column;min-height:0;}
+.sec-h{padding:7px 12px;font-size:11px;font-weight:800;letter-spacing:1px;
+  color:var(--muted);background:#0c1526;display:flex;align-items:center;gap:6px;flex:none;}
+.sec-h .n{margin-left:auto;color:var(--accent);}
+#devInfo{padding:9px 12px;font-size:12px;line-height:1.6;flex:none;min-height:78px;}
+#devInfo .nm{font-size:13.5px;font-weight:700;margin-bottom:3px;}
+#devInfo .mut{color:var(--muted);}
+.vchip{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;
+  margin:2px 3px 0 0;border:1px solid var(--warn);color:var(--warn);}
+.vchip.ok{border-color:var(--ok);color:var(--ok);}
+
+#threats{overflow-y:auto;padding:6px;flex:1;min-height:90px;}
+.threat{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:8px;
+  background:#0c1526;border:1px solid var(--line);margin-bottom:5px;cursor:pointer;
+  transition:.12s;}
+.threat:hover{border-color:var(--accent);background:#132340;}
+.threat.hid{border-style:dashed;border-color:var(--warn);}
+.th-ic{font-size:17px;flex:none;width:22px;text-align:center;}
+.th-main{flex:1;min-width:0;}
+.th-t{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;}
+.th-t .ar{color:var(--muted);font-weight:400;}
+.th-bar{height:5px;background:#08111f;border-radius:4px;overflow:hidden;margin-top:4px;}
+.th-bar i{display:block;height:100%;width:0;}
+.th-act{flex:none;background:#132340;border:1px solid var(--line);border-radius:7px;
+  color:var(--txt);cursor:pointer;padding:3px 7px;font-size:11px;line-height:1.25;
+  text-align:center;min-width:38px;}
+.th-act:hover{border-color:var(--accent);color:var(--accent);}
+.th-act b{display:block;font-size:9px;color:var(--muted);font-weight:400;}
+#log{overflow-y:auto;padding:6px 10px;font-size:11.5px;line-height:1.5;
+  flex:1;min-height:110px;}
+#log div{padding:1.5px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+#log .ok{color:var(--ok);}#log .bad{color:var(--bad);}
+#log .warn{color:var(--warn);}#log .info{color:var(--muted);}
+.empty{color:var(--muted);font-size:11.5px;padding:8px;text-align:center;}
+
+/* ============ 底部卡牌栏 ============ */
+#cards{flex:none;display:flex;gap:7px;padding:8px 12px;background:#0c1526;
+  border-top:1px solid var(--line);overflow-x:auto;align-items:stretch;}
+.card{position:relative;flex:none;width:96px;background:var(--panel2);
+  border:1.6px solid var(--line);border-radius:10px;padding:6px 4px 5px;cursor:pointer;
+  text-align:center;overflow:hidden;transition:.13s;}
+.card:hover{border-color:#3f5c85;transform:translateY(-2px);}
+.card.armed{border-color:var(--accent);background:#22365a;transform:translateY(-3px);
+  box-shadow:0 0 0 2px rgba(255,209,102,.25);}
+.card.no{opacity:.38;}
+.card .ck{position:absolute;top:2px;left:4px;font-size:9px;color:var(--muted);}
+.card .ci{font-size:19px;line-height:1.1;}
+.card .cn{font-size:11px;font-weight:700;margin-top:1px;}
+.card .cc{font-size:9.5px;color:var(--muted);}
+.card .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.66);
+  height:0;transition:height .12s;pointer-events:none;}
+#cardTip{flex:none;padding:8px 12px;font-size:11px;color:var(--muted);
+  border-left:1px solid var(--line);width:172px;line-height:1.5;}
+
+/* ============ 遮罩 ============ */
+#ov{position:fixed;inset:0;background:rgba(4,8,16,.9);z-index:60;display:none;
+  align-items:center;justify-content:center;padding:22px;}
+#ov.show{display:flex;}
+#ovBox{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  max-width:860px;width:100%;max-height:88vh;overflow-y:auto;padding:22px 26px;}
+#ovBox h2{margin:0 0 6px;font-size:21px;}
+#ovBox h3{margin:16px 0 6px;font-size:13px;color:var(--accent);letter-spacing:1px;}
+#ovBox p,#ovBox li{font-size:13px;line-height:1.75;color:#c8d6e8;}
+#ovBox ul{margin:5px 0;padding-left:20px;}
+.btnrow{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.btn{padding:9px 20px;border-radius:9px;border:1px solid var(--accent);
+  background:var(--accent);color:#0b1220;font-weight:700;cursor:pointer;font-size:13px;}
+.btn.gh{background:transparent;color:var(--txt);border-color:var(--line);}
+.btn:hover{filter:brightness(1.1);}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;}
+th{background:#0c1526;color:var(--muted);font-size:11px;}
+.kv2{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-top:8px;}
+.kv2 div{background:#0c1526;border:1px solid var(--line);border-radius:8px;padding:8px 11px;
+  font-size:12.5px;}
+.kv2 b{color:var(--accent);font-size:16px;display:block;}
+.rank{font-size:52px;font-weight:900;text-align:center;margin:8px 0;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">🛡 SOC 攻防对抗<span class="sub">企业网络安全防护演练</span></div>
+    <div class="hud">
+      <div class="chip">波次 <b id="hWave">0/6</b></div>
+      <div class="chip hp">完整度 <b id="hHp">120</b>
+        <div class="bar"><i id="bHp" style="width:100%"></i></div></div>
+      <div class="chip ap">行动点 <b id="hAp">14</b>
+        <div class="bar"><i id="bAp" style="width:100%"></i></div></div>
+      <div class="chip">得分 <b id="hScore">0</b></div>
+      <div class="chip">连击 <b id="hCombo">×1.0</b></div>
+    </div>
+    <div class="tools">
+      <button id="bPause">⏸ 暂停</button>
+      <button id="bManual">📖 手册</button>
+      <button id="bHint" class="on">💡 提示</button>
+      <button id="bSfx" class="on">🔊 音效</button>
+      <button id="bFs">⛶ 全屏</button>
+      <button id="bRestart">🔄 重开</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="stage">
+      <svg id="svg" viewBox="0 0 1700 1080" preserveAspectRatio="xMidYMid meet">
+        <g id="viewport">
+          <g id="zones"></g>
+          <g id="edges"></g>
+          <g id="atkpaths"></g>
+          <g id="nodes"></g>
+          <g id="atklayer"></g>
+        </g>
+      </svg>
+      <div id="phaseTag" class="prep">准备中</div>
+      <div id="tip"></div>
+      <div id="toast"></div>
+    </div>
+
+    <aside>
+      <div class="sec">
+        <div class="sec-h">🎯 选中设备</div>
+        <div id="devInfo"><div class="empty">点击拓扑节点查看详情</div></div>
+      </div>
+      <div class="sec" style="flex:1.25">
+        <div class="sec-h">🚨 活跃威胁<span class="n" id="thN">0</span></div>
+        <div id="threats"><div class="empty">暂无活跃威胁</div></div>
+      </div>
+      <div class="sec" style="flex:1">
+        <div class="sec-h">📜 事件日志</div>
+        <div id="log"></div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="cards"></div>
+  <div id="ov"><div id="ovBox"></div></div>
+</div>
+
+<script>
+/* ==================== 1. 拓扑数据 ==================== */
+const CAT={external:'外部网络',firewall:'防火墙',ids:'入侵检测/防御',vpn:'VPN 接入',
+  waf:'Web 防护',switch:'交换机',router:'路由器',server_dmz:'DMZ 服务器',
+  server_dc:'数据中心服务器',database:'数据库',siem:'安全分析',nac:'准入控制',
+  soc:'安全运营',employee:'员工终端'};
+const COLOR={external:'#4aa3ff',firewall:'#ff5c5c',ids:'#ff9f43',vpn:'#b06bff',
+  waf:'#ff6bce',switch:'#2bd9c9',router:'#4cd964',server_dmz:'#ffd93b',
+  server_dc:'#ffb020',database:'#c98a5e',siem:'#36d1dc',nac:'#8a7bff',
+  soc:'#ff4d6d',employee:'#9aa7b5'};
+
+const NODES=[
+ {id:'internet',label:'互联网',cat:'external',icon:'☁',ip:'203.0.113.0/24'},
+ {id:'remote',label:'远程用户',cat:'external',icon:'🧳',ip:'动态分配'},
+ {id:'partner',label:'合作伙伴',cat:'external',icon:'🤝',ip:'198.51.100.0/24'},
+ {id:'ddos',label:'DDoS 防护',cat:'ids',icon:'🌊',ip:'—'},
+ {id:'fw_edge',label:'边界防火墙',cat:'firewall',icon:'🛡',ip:'203.0.113.1'},
+ {id:'vpn',label:'VPN 网关',cat:'vpn',icon:'🔐',ip:'203.0.113.2'},
+ {id:'waf',label:'WAF',cat:'waf',icon:'🧱',ip:'203.0.113.3'},
+ {id:'ips',label:'IPS 入侵防御',cat:'ids',icon:'🔍',ip:'—'},
+ {id:'dmz_sw',label:'DMZ 交换机',cat:'switch',icon:'🔀',ip:'10.20.0.1'},
+ {id:'web',label:'Web 服务器',cat:'server_dmz',icon:'🌐',ip:'10.20.0.10'},
+ {id:'mail',label:'邮件服务器',cat:'server_dmz',icon:'✉',ip:'10.20.0.11'},
+ {id:'dns',label:'DNS 服务器',cat:'server_dmz',icon:'🌍',ip:'10.20.0.12'},
+ {id:'proxy',label:'反向代理',cat:'server_dmz',icon:'🔁',ip:'10.20.0.13'},
+ {id:'core_sw',label:'核心交换机',cat:'switch',icon:'🔀',ip:'10.0.0.1'},
+ {id:'fw_int',label:'内网防火墙',cat:'firewall',icon:'🛡',ip:'10.0.0.2'},
+ {id:'ids',label:'IDS 传感器',cat:'ids',icon:'📡',ip:'10.0.0.3'},
+ {id:'router',label:'边界路由器',cat:'router',icon:'📶',ip:'203.0.113.254'},
+ {id:'siem',label:'SIEM 平台',cat:'siem',icon:'📊',ip:'10.0.0.5'},
+ {id:'nac',label:'NAC 准入',cat:'nac',icon:'🚪',ip:'10.0.0.6'},
+ {id:'soc',label:'SOC 运营中心',cat:'soc',icon:'🛰',ip:'10.0.0.7'},
+ {id:'db',label:'数据库服务器',cat:'database',icon:'🗃',ip:'10.30.0.10'},
+ {id:'app',label:'应用服务器',cat:'server_dc',icon:'⚙',ip:'10.30.0.11'},
+ {id:'file',label:'文件服务器',cat:'server_dc',icon:'📁',ip:'10.30.0.12'},
+ {id:'backup',label:'备份服务器',cat:'server_dc',icon:'💾',ip:'10.30.0.13'},
+ {id:'sw_mgmt',label:'管理层交换机',cat:'switch',icon:'🔀',ip:'10.10.10.1'},
+ {id:'sw_fin',label:'财务部交换机',cat:'switch',icon:'🔀',ip:'10.10.20.1'},
+ {id:'sw_hr',label:'人事部交换机',cat:'switch',icon:'🔀',ip:'10.10.30.1'},
+ {id:'sw_dev',label:'研发部交换机',cat:'switch',icon:'🔀',ip:'10.10.40.1'},
+ {id:'sw_guest',label:'访客交换机',cat:'switch',icon:'🔀',ip:'10.10.99.1'},
+ {id:'pc_mgmt',label:'高管终端',cat:'employee',icon:'💻',ip:'10.10.10.20'},
+ {id:'pc_fin1',label:'财务终端·甲',cat:'employee',icon:'💻',ip:'10.10.20.20'},
+ {id:'pc_fin2',label:'财务终端·乙',cat:'employee',icon:'💻',ip:'10.10.20.21'},
+ {id:'pc_hr',label:'人事终端',cat:'employee',icon:'💻',ip:'10.10.30.20'},
+ {id:'pc_dev1',label:'研发终端·甲',cat:'employee',icon:'💻',ip:'10.10.40.20'},
+ {id:'pc_dev2',label:'研发终端·乙',cat:'employee',icon:'💻',ip:'10.10.40.21'},
+ {id:'dev_guest',label:'访客设备',cat:'employee',icon:'📱',ip:'10.10.99.20'},
+ {id:'mobile',label:'移动设备',cat:'employee',icon:'📲',ip:'10.10.0.0/24'},
+ {id:'soc_ws',label:'SOC 工作站',cat:'soc',icon:'🖥',ip:'10.0.0.70'},
+];
+
+const EDGES=[
+ ['internet','ddos'],['ddos','fw_edge'],['internet','router'],
+ ['remote','vpn'],['partner','fw_edge'],
+ ['fw_edge','waf'],['waf','ips'],['ips','dmz_sw'],
+ ['vpn','core_sw'],['fw_edge','core_sw'],
+ ['dmz_sw','web'],['dmz_sw','mail'],['dmz_sw','dns'],['dmz_sw','proxy'],
+ ['proxy','web'],['web','app'],
+ ['core_sw','fw_int'],['fw_int','ids'],['core_sw','router'],
+ ['core_sw','siem'],['core_sw','nac'],['core_sw','soc'],
+ ['fw_int','sw_mgmt'],['fw_int','sw_fin'],['fw_int','sw_hr'],
+ ['fw_int','sw_dev'],['fw_int','sw_guest'],
+ ['nac','sw_mgmt'],['nac','sw_fin'],['nac','sw_hr'],['nac','sw_dev'],['nac','sw_guest'],
+ ['soc','siem'],['soc','soc_ws'],['ids','siem'],
+ ['fw_edge','siem'],['fw_int','siem'],
+ ['sw_mgmt','pc_mgmt'],['sw_fin','pc_fin1'],['sw_fin','pc_fin2'],
+ ['sw_hr','pc_hr'],['sw_dev','pc_dev1'],['sw_dev','pc_dev2'],['sw_guest','dev_guest'],
+ ['nac','mobile'],
+ ['fw_int','app'],['app','db'],['app','file'],['fw_int','backup'],
+];
+
+const ROWS=[
+ {name:'外部网络',ids:['internet','remote','partner']},
+ {name:'边界安全防护',ids:['ddos','fw_edge','vpn','waf','ips']},
+ {name:'DMZ 隔离区',ids:['dmz_sw','web','mail','dns','proxy']},
+ {name:'核心网络',ids:['core_sw','fw_int','ids','router','siem','nac','soc']},
+ {name:'数据中心',ids:['db','app','file','backup']},
+ {name:'内网部门',ids:['sw_mgmt','sw_fin','sw_hr','sw_dev','sw_guest']},
+ {name:'员工终端',ids:['pc_mgmt','pc_fin1','pc_fin2','pc_hr','pc_dev1','pc_dev2']},
+ {name:'访客 / 移动 / SOC',ids:['dev_guest','mobile','soc_ws']},
+];
+
+/* ==================== 2. 布局 ==================== */
+const ML=150,MR=1550,TOP=100,GAP=128,SPAN=MR-ML,CX=(ML+MR)/2;
+const pos={};
+ROWS.forEach((row,r)=>{
+  const n=row.ids.length;
+  row.ids.forEach((id,i)=>{
+    pos[id]={x: n===1?CX:ML+i*SPAN/(n-1), y: TOP+r*GAP};
+  });
+});
+const byId={}; NODES.forEach(n=>byId[n.id]=n);
+const und={}; NODES.forEach(n=>und[n.id]=[]);
+EDGES.forEach(([s,t])=>{und[s].push([t]);und[t].push([s]);});
+
+/* ==================== 3. 游戏数据 ==================== */
+const VULN={patch:'未修复漏洞',mfa:'弱身份认证',training:'安全意识薄弱',edr:'无终端检测',
+  segment:'缺少网络分段',dlp:'无数据防泄漏',waf:'无Web防护',ddos:'无流量清洗',
+  dnssec:'DNS未加固',backup:'备份不完善'};
+
+const VULNS={
+  ddos:['ddos'],fw_edge:['patch'],vpn:['mfa'],waf:[],ips:['patch'],
+  dmz_sw:['segment'],web:['patch','waf'],mail:['patch','training'],
+  dns:['dnssec','patch'],proxy:['patch','waf','ddos'],
+  core_sw:['segment','patch'],fw_int:['patch','segment'],ids:['patch'],
+  router:['ddos','patch'],siem:['patch'],nac:['patch'],soc:['patch','dlp'],
+  db:['patch','dlp','backup'],app:['patch','waf','dlp'],
+  file:['patch','dlp','backup','edr'],backup:['patch','backup'],
+  sw_mgmt:['segment','patch'],sw_fin:['segment','patch'],sw_hr:['segment','patch'],
+  sw_dev:['segment','patch'],sw_guest:['segment'],
+  pc_mgmt:['patch','training','edr'],pc_fin1:['patch','training','edr','dlp'],
+  pc_fin2:['patch','training','edr','dlp'],pc_hr:['patch','training','edr','dlp'],
+  pc_dev1:['patch','training','edr','dlp'],pc_dev2:['patch','training','edr','dlp'],
+  dev_guest:['segment'],mobile:['training','edr','dlp'],soc_ws:['patch','edr'],
+};
+
+const ATTACKS={
+  ddos:{n:'DDoS 洪泛',i:'🌊',c:'#ff9f43',need:null,dmg:0,prog:5,foothold:false,ct:['ddos_clean'],hold:true,
+    d:'海量流量打瘫对外服务，占用期间持续掉血且行动点恢复减半'},
+  exploit:{n:'漏洞利用',i:'🐞',c:'#ff5c5c',need:'patch',dmg:9,prog:6,foothold:true,ct:['patch','waf'],
+    d:'利用未修复漏洞入侵，沿途逐跳建立据点'},
+  bruteforce:{n:'暴力破解',i:'🔨',c:'#b06bff',need:'mfa',dmg:7,prog:6,foothold:false,ct:['mfa'],
+    d:'对远程接入与登录口进行密码爆破'},
+  phishing:{n:'钓鱼邮件',i:'🎣',c:'#4aa3ff',need:'training',dmg:6,prog:5,foothold:true,ct:['mail'],
+    d:'伪装邮件诱骗员工，从终端向内网渗透'},
+  sqli:{n:'SQL 注入',i:'💉',c:'#ff6bce',need:'waf',dmg:10,prog:6,foothold:false,ct:['waf'],
+    d:'通过 Web 应用注入恶意语句，直取数据库'},
+  ransomware:{n:'勒索软件',i:'🔒',c:'#ff4d6d',need:'edr',dmg:12,prog:7,foothold:true,ct:['edr','restore'],
+    d:'加密文件服务器与数据库，沿途扩散'},
+  lateral:{n:'横向移动',i:'🕸',c:'#ffd166',need:'segment',dmg:4,prog:5,foothold:true,ct:['segment'],
+    d:'从已失陷设备向相邻节点扩散'},
+  exfil:{n:'数据外泄',i:'📤',c:'#36d1dc',need:'dlp',dmg:14,prog:6,foothold:false,ct:['dlp'],
+    d:'将核心数据经出口偷运至外网'},
+  zeroday:{n:'0day 攻击',i:'☠',c:'#ff2d55',need:'edr',dmg:16,prog:8,foothold:true,ct:['edr','hunt'],
+    d:'未知漏洞攻击，无补丁可用，只能靠行为检测'},
+  dns:{n:'DNS 劫持',i:'🌍',c:'#4cd964',need:'dnssec',dmg:8,prog:5,foothold:false,ct:['dnssec'],
+    d:'篡改解析记录，将流量引向恶意站点'},
+  insider:{n:'内部威胁',i:'🕵',c:'#c98a5e',need:'dlp',dmg:9,prog:6,foothold:true,ct:['dlp','mail'],
+    d:'内部人员违规窃取敏感数据'},
+  supply:{n:'供应链攻击',i:'📦',c:'#8a7bff',need:'patch',dmg:11,prog:7,foothold:true,ct:['patch','edr'],
+    d:'经合作方通道投毒，污染应用与代码'},
+};
+
+const ACTIONS={
+  isolate:{k:'1',n:'隔离主机',i:'🧯',cost:3,cd:3,cl:[],d:'万能阻断：摧毁该节点一切攻击并离线 12 秒。核心设备会造成业务中断'},
+  patch:{k:'2',n:'打补丁',i:'🔧',cost:3,cd:.6,cl:['patch'],d:'修复系统漏洞'},
+  mfa:{k:'3',n:'启用MFA',i:'🔐',cost:2,cd:.6,cl:['mfa'],d:'强制多因素认证'},
+  waf:{k:'4',n:'WAF规则',i:'🧱',cost:2,cd:.6,cl:['waf'],d:'部署 Web 应用层防护'},
+  ddos_clean:{k:'5',n:'DDoS清洗',i:'🌊',cost:3,cd:3,cl:['ddos'],d:'流量清洗与限速，解除占用'},
+  edr:{k:'6',n:'EDR查杀',i:'🦠',cost:3,cd:.6,cl:['edr'],d:'终端检测与响应，查杀恶意进程'},
+  mail:{k:'7',n:'邮件网关',i:'✉',cost:2,cd:.6,cl:['training'],d:'钓鱼邮件拦截与安全意识培训'},
+  segment:{k:'8',n:'网络微隔离',i:'🔀',cost:2,cd:.6,cl:['segment'],d:'网段隔离策略，阻断横向移动'},
+  dlp:{k:'9',n:'DLP防泄漏',i:'🛡',cost:3,cd:.6,cl:['dlp'],d:'数据防泄漏，监控外发通道'},
+  restore:{k:'0',n:'恢复备份',i:'💾',cost:4,cd:20,cl:['backup'],d:'从备份恢复，净化失陷的数据资产'},
+  dnssec:{k:'-',n:'DNSSEC',i:'🌍',cost:2,cd:.6,cl:['dnssec'],d:'DNS 安全扩展，防解析劫持'},
+  hunt:{k:'=',n:'威胁狩猎',i:'🔎',cost:2,cd:.6,cl:[],d:'主动狩猎未知威胁，揭示隐蔽攻击'},
+};
+const CORE_CATS=['switch','router','firewall'];
+
+const WAVE_COUNT=6;
+const WAVE_ATK=[5,7,9,11,13,16];
+const WAVE_POOL=[
+ ['ddos','bruteforce','phishing'],
+ ['ddos','bruteforce','phishing','exploit'],
+ ['phishing','exploit','sqli','dns','bruteforce'],
+ ['exploit','sqli','ransomware','insider','ddos','dns'],
+ ['zeroday','supply','ransomware','sqli','exploit','phishing','dns'],
+ ['zeroday','supply','ransomware','sqli','exploit','ddos','insider','dns'],
+];
+const WAVE_PROG=[1.0,0.92,0.85,0.79,0.73,0.68];
+const MAX_ALIVE=8, ATK_LIFE=60;
+
+/* ==================== 4. 状态 ==================== */
+const G={
+  t:0,phase:'menu',wave:0,hp:120,hpMax:120,ap:13,apMax:13,score:0,combo:0,
+  attacks:[],queue:[],waveT:0,prepT:0,ddosHold:0,paused:false,
+  hint:true,sfx:true,armed:null,sel:null,
+  stats:{comp:new Set(),dmg:{},leaks:0,holds:0,exfils:0,blocked:0,hardened:0,isolates:0,inv:0},
+};
+const st={};
+NODES.forEach(n=>st[n.id]={vulns:(VULNS[n.id]||[]).slice(),comp:false,qUntil:0,
+  nLat:0,latWave:0,nEx:0,exWave:0});
+Object.keys(ACTIONS).forEach(k=>ACTIONS[k].cdt=0);
+
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const rR=(a,b)=>a+Math.random()*(b-a);
+const $=s=>document.querySelector(s);
+const SVGNS='http://www.w3.org/2000/svg';
+const el=(t,a={})=>{const e=document.createElementNS(SVGNS,t);
+  for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+/* ==================== 5. 构建 SVG ==================== */
+const gZ=$('#zones'),gE=$('#edges'),gP=$('#atkpaths'),gN=$('#nodes'),gA=$('#atklayer');
+ROWS.forEach((row,r)=>{
+  const y=TOP+r*GAP;
+  gZ.appendChild(el('rect',{class:'zone-band',x:52,y:y-58,width:1596,height:114,rx:14}));
+  const t=el('text',{class:'zone-label',x:64,y:y-66}); t.textContent=row.name; gZ.appendChild(t);
+});
+EDGES.forEach(([s,t])=>{
+  const a=pos[s],b=pos[t];
+  gE.appendChild(el('path',{class:'edge',d:`M${a.x},${a.y} L${b.x},${b.y}`}));
+});
+
+const NV={};
+const NW=172,NH=64;
+NODES.forEach(n=>{
+  const p=pos[n.id],c=COLOR[n.cat];
+  const g=el('g',{class:'node',transform:`translate(${p.x},${p.y})`});
+  const box=el('rect',{class:'node-box',x:-NW/2,y:-NH/2,width:NW,height:NH,rx:13,stroke:c});
+  g.appendChild(box);
+  g.appendChild(el('rect',{x:-NW/2,y:-NH/2,width:NW,height:4.5,rx:2,fill:c}));
+  g.appendChild(el('circle',{cx:-72,cy:-13,r:5,fill:c}));
+  const ic=el('text',{class:'node-icon',x:-55,y:3}); ic.textContent=n.icon; g.appendChild(ic);
+  const lb=el('text',{class:'node-label',x:-25,y:-7}); lb.textContent=n.label; g.appendChild(lb);
+  const tg=el('text',{class:'node-tag',x:-25,y:12}); tg.textContent=CAT[n.cat]; g.appendChild(tg);
+  const bd=el('text',{class:'node-badge',x:66,y:2}); g.appendChild(bd);
+  const vg=el('g',{}); g.appendChild(vg);
+  const pg=el('g',{display:'none'});
+  pg.appendChild(el('rect',{x:-76,y:23,width:152,height:6,rx:3,fill:'#070d18'}));
+  const pf=el('rect',{x:-76,y:23,width:0,height:6,rx:3}); pg.appendChild(pf);
+  g.appendChild(pg);
+  g.addEventListener('mouseenter',e=>showTip(n,e));
+  g.addEventListener('mousemove',e=>moveTip(e));
+  g.addEventListener('mouseleave',hideTip);
+  g.addEventListener('click',e=>{e.stopPropagation();onNodeClick(n.id);});
+  gN.appendChild(g);
+  NV[n.id]={g,box,bd,vg,pg,pf};
+});
+
+/* 攻击可视化 */
+const AV={};
+function mkAtkVis(a){
+  const g=el('g',{});
+  const pth=el('path',{class:'atk-path',stroke:a.def.c});
+  const halo=el('circle',{class:'atk-halo',r:16,fill:a.def.c});
+  const dot=el('circle',{class:'atk-dot',r:9,fill:a.def.c});
+  const txt=el('text',{class:'atk-txt',y:-22});
+  g.appendChild(pth);g.appendChild(halo);g.appendChild(dot);g.appendChild(txt);
+  gA.appendChild(g); AV[a.id]={g,pth,halo,dot,txt};
+}
+function rmAtkVis(a){ if(AV[a.id]){AV[a.id].g.remove();delete AV[a.id];} }
+
+/* ==================== 6. 工具 ==================== */
+function log(msg,cls='info'){
+  const d=document.createElement('div');
+  d.className=cls; d.textContent=`[${(G.t/1000).toFixed(0).padStart(3,'0')}s] ${msg}`;
+  const L=$('#log'); L.appendChild(d);
+  while(L.children.length>150) L.removeChild(L.firstChild);
+  L.scrollTop=L.scrollHeight;
+}
+function toast(msg,cls=''){
+  const d=document.createElement('div'); d.className='toast '+cls; d.textContent=msg;
+  $('#toast').appendChild(d);
+  setTimeout(()=>d.remove(),2100);
+}
+let lastFlash=-9999;
+function flash(){
+  if(G.t-lastFlash<420)return;         // 持续伤害不重复触发，避免画面抽搐
+  lastFlash=G.t;
+  $('#stage').classList.remove('hurt');void $('#stage').offsetWidth;
+  $('#stage').classList.add('hurt');
+}
+function damage(v){
+  if(v<=0)return;
+  G.hp=Math.max(0,G.hp-v); G.combo=0; flash();
+  if(G.hp<=0&&G.phase!=='over'&&G.phase!=='menu') gameOver(false);
+}
+function comboMul(){return Math.min(2,1+G.combo*0.05);}
+function score(v){G.score=Math.max(0,G.score+Math.round(v*comboMul()));}
+
+let ac=null;
+function sfx(f,dur,type='sine',vol=.05){
+  if(!G.sfx)return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.type=type;o.frequency.value=f;g.gain.value=vol;
+    o.connect(g);g.connect(ac.destination);o.start();
+    g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);
+    o.stop(ac.currentTime+dur);
+  }catch(e){}
+}
+
+/* ==================== 7. 寻路 ==================== */
+function bfs(from,to){
+  if(from===to)return[from];
+  const q=[[from]],seen=new Set([from]);
+  while(q.length){
+    const p=q.shift(),cur=p[p.length-1];
+    for(const [nb] of (und[cur]||[])){
+      if(seen.has(nb)||st[nb].qUntil>G.t)continue;
+      const np=p.concat([nb]);
+      if(nb===to)return np;
+      seen.add(nb);q.push(np);
+    }
+  }
+  return null;
+}
+const isExt=id=>byId[id].cat==='external';
+function nodesWithVuln(tag){
+  return NODES.filter(n=>!isExt(n.id)&&st[n.id].vulns.includes(tag)
+    &&st[n.id].qUntil<=G.t&&!st[n.id].comp).map(n=>n.id);
+}
+const empIds=()=>NODES.filter(n=>n.cat==='employee').map(n=>n.id);
+const compIds=pool=>NODES.filter(n=>!isExt(n.id)&&st[n.id].comp
+  &&(!pool||pool.includes(n.id))).map(n=>n.id);
+
+function pickRoute(type){
+  if(type==='lateral'){
+    const src=rnd(compIds()); if(!src)return null;
+    const nb=(und[src]||[]).map(x=>x[0]).filter(id=>!isExt(id)&&!st[id].comp&&st[id].qUntil<=G.t);
+    if(!nb.length)return null;
+    return{entry:src,target:rnd(nb)};
+  }
+  if(type==='exfil'){
+    const src=rnd(compIds(['db','file','app','backup'])); if(!src)return null;
+    return{entry:src,target:'internet'};
+  }
+  const M={
+    ddos:{e:['internet'],t:['web','proxy','dns','mail']},
+    bruteforce:{e:['remote'],t:['vpn','fw_edge','mail']},
+    phishing:{e:['remote'],t:empIds()},
+    exploit:{e:['internet','partner'],t:nodesWithVuln('patch')},
+    sqli:{e:['internet'],t:['db']},
+    ransomware:{e:['remote'],t:['file','db','backup']},
+    dns:{e:['internet'],t:['dns']},
+    zeroday:{e:['internet'],t:['db','app','core_sw','file']},
+    insider:{e:empIds(),t:['file','db']},
+    supply:{e:['partner'],t:['app','web','db']},
+  };
+  const m=M[type];
+  if(!m)return null;
+  const tl=m.t.filter(id=>!st[id].comp&&st[id].qUntil<=G.t);
+  if(!tl.length)return null;
+  return{entry:rnd(m.e),target:rnd(tl)};
+}
+function hiddenChance(){
+  let p=0.15;
+  if(G.wave>=5)p+=0.15;
+  if(['ids','siem','soc'].some(id=>st[id].comp))p+=0.35;
+  return p;
+}
+function nodeProgTime(def,id){
+  if(isExt(id))return 0.75;
+  const s=st[id];
+  let t=def.prog*(WAVE_PROG[G.wave-1]||1);
+  if(def.need&&s.vulns.includes(def.need))t*=0.62;
+  else if(s.vulns.length===0)t*=1.45;
+  if(s.comp)t*=0.6;
+  return Math.max(1.2,t);
+}
+
+/* ==================== 8. 攻击系统 ==================== */
+let atkSeq=0;
+function trySpawn(type){
+  if(G.attacks.length>=MAX_ALIVE)return 'full';
+  const pool=WAVE_POOL[G.wave-1]||['exploit'];
+  for(let k=0;k<6;k++){
+    const ty=k===0?type:rnd(pool);
+    const r=pickRoute(ty);
+    if(!r)continue;
+    const p=bfs(r.entry,r.target);
+    if(!p||p.length<2)continue;
+    createAtk(ty,p);
+    return 'ok';
+  }
+  return 'noroute';
+}
+function createAtk(type,path){
+  const def=ATTACKS[type];
+  const hidden=Math.random()<hiddenChance();
+  const a={id:++atkSeq,type,def,path:path.slice(),hop:0,state:'work',prog:0,
+    moveT:0,life:0,hidden,rr:false,pt:nodeProgTime(def,path[0]),target:path[path.length-1],lt:0};
+  G.attacks.push(a); mkAtkVis(a);
+  if(hidden){
+    log('⚠ 检测到异常活动，攻击特征不明……','warn');
+    toast('检测到未知威胁，需调查后处置','warn');
+  }else{
+    log(`${def.i} ${def.n} 自「${byId[path[0]].label}」发起 → 目标「${byId[a.target].label}」`,'bad');
+    toast(`${def.i} ${def.n} 来袭！`,'bad');
+  }
+  sfx(180,.18,'sawtooth',.045);
+  renderThreats();
+}
+function atkAt(id){return G.attacks.filter(a=>a.state==='work'&&a.path[a.hop]===id);}
+function rmAtk(a){
+  const i=G.attacks.indexOf(a);
+  if(i>=0)G.attacks.splice(i,1);
+  rmAtkVis(a); renderThreats();
+}
+function blockAtk(a,why){
+  log(`✅ ${a.hidden?'未知威胁':a.def.n} 被阻断（${why}） +60`,'ok');
+  score(60);G.combo++;G.stats.blocked++;
+  G.hp=Math.min(G.hpMax,G.hp+1);
+  sfx(720,.14,'square',.045);
+  rmAtk(a);
+}
+function finishObj(a,cur){
+  const nm=byId[cur].label;
+  if(a.def.hold){
+    st[cur].comp=true;st[cur].nLat=G.t+rR(8,14);st[cur].nEx=G.t+rR(10,16);
+    G.stats.comp.add(cur);G.ddosHold=20;G.stats.holds++;
+    log(`🌊 ${nm} 被 DDoS 打瘫！持续掉血、行动点回复减半（20s）`,'bad');
+    toast(`${nm} 服务不可用！`,'bad');
+  }else{
+    if(!st[cur].comp){st[cur].comp=true;st[cur].nLat=G.t+rR(8,14);
+      st[cur].nEx=G.t+rR(10,16);G.stats.comp.add(cur);}
+    log(`🚨 ${a.def.n} 达成目标：${nm}`,'bad');
+    if(a.type==='exfil'){G.stats.exfils++;log('📤 核心数据已泄露至外网！','bad');}
+    toast(`${a.def.n} 得手：${nm}`,'bad');
+  }
+  G.combo=0;G.stats.leaks++;sfx(110,.3,'sawtooth',.06);
+}
+function completeHop(a){
+  const cur=a.path[a.hop],last=a.hop===a.path.length-1;
+  if(!isExt(cur)){
+    let dmg=0;
+    if(last)dmg=a.def.dmg;
+    else if(a.hop>=2)dmg=a.def.dmg*0.12;
+    const take=last||a.def.foothold;
+    if(take&&!st[cur].comp){
+      st[cur].comp=true;st[cur].nLat=G.t+rR(8,14);st[cur].nEx=G.t+rR(10,16);
+      G.stats.comp.add(cur);
+      log(`💀 ${byId[cur].label} 已被 ${a.hidden?'未知威胁':a.def.n} 控制`,'bad');
+    }
+    if(dmg>0){
+      damage(dmg);
+      log(`💥 ${byId[cur].label} 受损（-${dmg.toFixed(1)} 完整度）`,'bad');
+      G.stats.dmg[a.type]=(G.stats.dmg[a.type]||0)+dmg;
+    }
+  }
+  if(last){finishObj(a,cur);rmAtk(a);return;}
+  const nx=a.path[a.hop+1];
+  if(st[nx].qUntil>G.t)reroute(a);
+  else{a.state='move';a.moveT=0;}
+}
+function reroute(a){
+  if(!a.rr){
+    a.rr=true;
+    const p=bfs(a.path[a.hop],a.target);
+    if(p&&p.length>=2){
+      a.path=p.slice();a.hop=0;a.state='work';a.prog=0;a.pt=nodeProgTime(a.def,p[0]);
+      log(`↩ ${a.hidden?'未知威胁':a.def.n} 绕行新路径（${p.length-1} 跳）`,'warn');
+      return;
+    }
+  }
+  a.state='linger';a.lt=5;a.life=Math.min(a.life,25);
+  log(`⏸ ${a.hidden?'未知威胁':a.def.n} 无法抵达目标，在边界徘徊`,'warn');
+}
+function resolveTimeout(a){
+  const cur=a.path[a.hop];
+  if(!isExt(cur)){
+    const d=a.def.dmg*0.3;
+    damage(d);
+    log(`⌛ ${a.def.n} 活动超时并就地造成破坏（-${d.toFixed(1)}）`,'warn');
+  }
+}
+
+/* ==================== 9. 卡牌结算 ==================== */
+function onNodeClick(id){
+  G.sel=id; renderDev();
+  if(!G.armed)return;
+  applyCard(id,G.armed);
+  if(!G.keepArmed)setArmed(null);
+}
+function validOn(id,k){
+  if(isExt(id))return false;
+  if(k==='isolate')return true;
+  const a=ACTIONS[k];
+  if(atkAt(id).some(x=>x.hidden?k==='hunt':x.def.ct.includes(k)))return true;
+  if(a.cl.some(v=>st[id].vulns.includes(v)))return true;
+  return false;
+}
+function applyCard(id,k,costExtra=0){
+  const n=byId[id],a=ACTIONS[k];
+  if(G.phase!=='wave'&&G.phase!=='prep')return;
+  if(isExt(id)){toast('外部网络节点无法直接处置','warn');return;}
+  if(a.cdt>0){toast(`${a.n} 冷却中（${a.cdt.toFixed(1)}s）`,'warn');return;}
+  const cost=a.cost+costExtra;
+  if(G.ap<cost){toast(`行动点不足（需 ${cost}）`,'warn');sfx(140,.1,'square',.03);return;}
+
+  if(k==='isolate'){
+    const atks=atkAt(id);
+    atks.forEach(x=>{score(60);G.combo++;G.stats.blocked++;
+      log(`✅ ${x.hidden?'未知威胁':x.def.n} 因主机隔离而中断 +60`,'ok');rmAtk(x);});
+    st[id].comp=false;st[id].qUntil=G.t+12000;
+    G.stats.isolates++;
+    const core=CORE_CATS.includes(n.cat);
+    const d=core?5:1;
+    damage(d);
+    log(`🧯 已隔离 ${n.label}（离线 12s${core?'，业务中断 -5':''}）`,core?'warn':'ok');
+    G.ap-=cost;a.cdt=a.cd;sfx(520,.12,'triangle',.05);
+    return;
+  }
+
+  let eff=false;
+  // 反制攻击
+  const hits=atkAt(id).filter(x=>x.hidden?k==='hunt':x.def.ct.includes(k));
+  if(hits.length){
+    hits.forEach(x=>{
+      if(x.hidden){x.hidden=false;log(`🔎 已识别未知威胁：${x.def.n}`,'ok');sfx(660,.12,'sine',.05);}
+      blockAtk(x,`${a.n} 反制成功`);
+    });
+    eff=true;
+  }
+  // 清除弱点
+  const cl=a.cl.filter(v=>st[id].vulns.includes(v));
+  if(cl.length){
+    st[id].vulns=st[id].vulns.filter(v=>!a.cl.includes(v));
+    score(40*cl.length);G.stats.hardened+=cl.length;
+    log(`🛡 加固 ${n.label}：已消除 ${cl.map(v=>VULN[v]).join('、')} +${40*cl.length}`,'ok');
+    eff=true;
+  }
+  // 净化失陷
+  if(eff&&st[id].comp&&(k==='edr'||k==='restore'||k==='hunt'||k==='patch')){
+    st[id].comp=false;G.stats.comp.delete(id);
+    score(30);log(`✨ ${n.label} 已净化，恢复正常运行`,'ok');
+  }
+  if(eff){
+    G.ap-=cost;a.cdt=a.cd;
+    if(G.ddosHold>0&&k==='ddos_clean'){G.ddosHold=0;log('🌊 DDoS 占用已解除，带宽恢复','ok');}
+    sfx(680,.12,'triangle',.05);
+  }else{
+    G.stats.inv++;
+    toast(`「${a.n}」对 ${n.label} 无效 —— 未消耗行动点`,'warn');
+    sfx(150,.09,'square',.025);
+  }
+}
+function setArmed(k){
+  G.armed=k;
+  document.querySelectorAll('.card').forEach(c=>
+    c.classList.toggle('armed',c.dataset.k===k));
+  updateArmHints();
+}
+function updateArmHints(){
+  NODES.forEach(n=>{
+    const v=G.armed?validOn(n.id,G.armed):false;
+    NV[n.id].g.classList.toggle('valid',v);
+  });
+}
+
+/* ==================== 10. 波次 ==================== */
+function startGame(){
+  Object.assign(G,{t:0,wave:0,hp:120,ap:13,score:0,combo:0,attacks:[],queue:[],
+    ddosHold:0,paused:false,sel:null});
+  G.stats={comp:new Set(),dmg:{},leaks:0,holds:0,exfils:0,blocked:0,hardened:0,isolates:0,inv:0};
+  NODES.forEach(n=>{const s=st[n.id];
+    s.vulns=(VULNS[n.id]||[]).slice();s.comp=false;s.qUntil=0;s.nLat=0;s.latWave=0;s.nEx=0;s.exWave=0;});
+  Object.keys(ACTIONS).forEach(k=>ACTIONS[k].cdt=0);
+  G.attacks.slice().forEach(rmAtk);
+  $('#log').innerHTML='';
+  setArmed(null);
+  G.paused=false;updatePauseBtn();
+  G.phase='prep';G.prepT=30;
+  log('🔧 战前准备阶段：给关键设备加固弱点，30 秒后第一波攻击到来','ok');
+  hideOv();
+}
+function startWave(){
+  G.wave++;G.phase='wave';G.waveT=0;G.ap=G.apMax;
+  const pool=WAVE_POOL[G.wave-1],n=WAVE_ATK[G.wave-1];
+  const iv=Math.max(2.2,6.0-0.6*G.wave);
+  G.queue=[];
+  for(let i=0;i<n;i++)G.queue.push({t:i*iv+Math.random()*iv*0.4,type:rnd(pool)});
+  log(`⚔ 第 ${G.wave} 波攻击开始（${n} 项威胁）`,'bad');
+  toast(`第 ${G.wave} 波攻击开始！`,'bad');
+  sfx(220,.3,'sawtooth',.055);
+}
+function endWave(){
+  const c=NODES.filter(n=>st[n.id].comp).length;
+  G.hp=Math.min(G.hpMax,G.hp+10);score(200);
+  log(`✅ 第 ${G.wave} 波防御成功（+10 完整度，+200 分）`,'ok');
+  const pen=Math.min(c*2,14);
+  if(pen>0){damage(pen);log(`⚠ 波次结算：${c} 台设备仍失陷（-${pen} 完整度）`,'warn');}
+  if(G.phase==='over')return;          // 结算扣血已导致失败，不再判定胜利
+  if(G.wave>=WAVE_COUNT){gameOver(true);return;}
+  G.phase='prep';G.prepT=25;
+  log(`🔧 进入准备阶段（25s），可提前开始下一波`,'ok');
+}
+function gameOver(win){
+  G.phase='over';G.attacks.slice().forEach(rmAtk);G.queue=[];
+  setArmed(null);
+  showResult(win);
+}
+
+/* ==================== 11. 主循环 ==================== */
+function update(dt){
+  const regen=(G.phase==='prep'?0.75:0.62)*(G.ddosHold>0?0.5:1);
+  G.ap=Math.min(G.apMax,G.ap+regen*dt);
+  for(const k in ACTIONS)if(ACTIONS[k].cdt>0)ACTIONS[k].cdt=Math.max(0,ACTIONS[k].cdt-dt);
+  if(G.ddosHold>0){G.ddosHold-=dt;damage(0.4*dt);}
+
+  if(G.phase==='prep'){
+    G.prepT-=dt;
+    if(G.prepT<=0)startWave();
+  }
+  if(G.phase==='wave'){
+    G.waveT+=dt;
+    while(G.queue.length&&G.queue[0].t<=G.waveT){
+      const it=G.queue.shift();
+      const r=trySpawn(it.type);
+      if(r==='full'){G.queue.unshift(it);break;}
+      if(r==='noroute'){score(50);log('🛡 攻击未能找到可达路径，防御体系生效 +50','ok');}
+    }
+    // 失陷节点自发展开
+    NODES.forEach(n=>{
+      const s=st[n.id];
+      if(!s.comp)return;
+      if(s.latWave!==G.wave&&G.t>=s.nLat){
+        s.latWave=G.wave;
+        if(Math.random()<0.65)trySpawn('lateral'); else s.nLat=G.t+8000;
+      }
+      if(G.wave>=3&&['db','file','app','backup'].includes(n.id)
+        &&s.exWave!==G.wave&&G.t>=s.nEx){
+        s.exWave=G.wave;
+        if(Math.random()<0.6)trySpawn('exfil'); else s.nEx=G.t+10000;
+      }
+    });
+    if(!G.queue.length&&!G.attacks.length)endWave();
+  }
+
+  for(let i=G.attacks.length-1;i>=0;i--){
+    if(G.phase==='over')break;
+    const a=G.attacks[i];
+    if(!a)break;            // 数组已在遍历中缩短（如 gameOver 清空），立即停止
+    a.life+=dt;
+    if(a.life>ATK_LIFE){resolveTimeout(a);rmAtk(a);continue;}
+    if(a.state==='work'){
+      const cur=a.path[a.hop];
+      if(st[cur].qUntil>G.t){blockAtk(a,'主机已被隔离');continue;}
+      a.prog+=dt/a.pt;
+      if(a.prog>=1)completeHop(a);
+    }else if(a.state==='move'){
+      a.moveT+=dt/0.55;
+      if(a.moveT>=1){
+        a.hop++;a.state='work';a.prog=0;
+        const nx=a.path[a.hop];
+        if(st[nx].qUntil>G.t)reroute(a);
+        else a.pt=nodeProgTime(a.def,nx);
+      }
+    }else if(a.state==='linger'){
+      a.lt-=dt;damage(0.3*dt);
+      if(a.lt<=0){
+        const p=bfs(a.path[a.hop],a.target);
+        if(p&&p.length>=2){
+          a.path=p.slice();a.hop=0;a.state='work';a.prog=0;
+          a.pt=nodeProgTime(a.def,p[0]);a.life=Math.min(a.life,30);
+          log(`🔁 ${a.def.n} 重新找到路径，继续渗透`,'warn');
+        }else a.lt=5;
+      }
+    }
+  }
+}
+
+/* ==================== 12. 渲染 ==================== */
+function render(){
+  $('#hWave').textContent=`${G.wave}/${WAVE_COUNT}`;
+  $('#hHp').textContent=Math.ceil(G.hp);
+  $('#bHp').style.width=(G.hp/G.hpMax*100)+'%';
+  $('#hAp').textContent=Math.floor(G.ap);
+  $('#bAp').style.width=(G.ap/G.apMax*100)+'%';
+  $('#hScore').textContent=G.score;
+  $('#hCombo').textContent='×'+comboMul().toFixed(1);
+  const pt=$('#phaseTag');
+  if(G.phase==='prep'){pt.className='prep';pt.textContent=`准备中 ${Math.ceil(G.prepT)}s`;}
+  else if(G.phase==='wave'){pt.className='wave';
+    pt.textContent=`第 ${G.wave} 波交战中 · 剩余 ${G.queue.length+G.attacks.length}`;}
+  else if(G.phase==='paused'){pt.className='';pt.textContent='已暂停';}
+  else{pt.className='';pt.textContent='演练结束';}
+
+  NODES.forEach(n=>{
+    const s=st[n.id],v=NV[n.id];
+    let fill='#152541',stroke=COLOR[n.cat],sw=1.6,badge='';
+    if(s.qUntil>G.t){fill='#141419';stroke='#5a6b7f';badge='🔒';}
+    else if(s.comp){fill='#3a1220';stroke='#ff4d6d';sw=3;badge='💀';}
+    else{const a=atkAt(n.id)[0];
+      if(a){stroke=a.hidden?'#ff9f43':a.def.c;sw=3.2;badge=a.hidden?'❓':'⚠';}}
+    if(!s.comp&&s.qUntil<=G.t&&s.vulns.length===0&&!atkAt(n.id).length)badge=badge||'🛡';
+    v.box.setAttribute('fill',fill);
+    v.box.setAttribute('stroke',stroke);
+    v.box.setAttribute('stroke-width',sw);
+    v.bd.textContent=badge;
+
+    const a=atkAt(n.id)[0];
+    if(a){
+      v.pg.setAttribute('display','');
+      v.pf.setAttribute('width',152*Math.min(1,a.prog));
+      v.pf.setAttribute('fill',a.hidden?'#ff9f43':a.def.c);
+    }else v.pg.setAttribute('display','none');
+
+    // 弱点点
+    const want=s.vulns.length;
+    if(v.vg.childNodes.length!==want){
+      v.vg.textContent='';
+      s.vulns.forEach((_,i)=>v.vg.appendChild(
+        el('circle',{cx:-76+i*11,cy:26,r:3.2,fill:'#ff9f43',opacity:.85})));
+    }
+    v.vg.setAttribute('display',a?'none':'');
+  });
+
+  // 攻击可视化
+  G.attacks.forEach(a=>{
+    const v=AV[a.id]; if(!v)return;
+    let x,y;
+    if(a.state==='move'){
+      const p1=pos[a.path[a.hop]],p2=pos[a.path[a.hop+1]],t=a.moveT;
+      x=p1.x+(p2.x-p1.x)*t; y=p1.y+(p2.y-p1.y)*t;
+    }else{const p=pos[a.path[a.hop]];x=p.x;y=p.y-4;}
+    v.halo.setAttribute('cx',x);v.halo.setAttribute('cy',y);
+    v.dot.setAttribute('cx',x);v.dot.setAttribute('cy',y);
+    v.txt.setAttribute('x',x);v.txt.setAttribute('y',y-23);
+    v.txt.textContent=a.hidden?'❓ 未知':a.def.i+' '+a.def.n;
+    if(a.hidden){
+      v.pth.setAttribute('display','none');
+      v.dot.setAttribute('fill','#ff9f43');
+    }else{
+      v.pth.setAttribute('display','');
+      v.dot.setAttribute('fill',a.def.c);
+      let d='';
+      for(let i=a.hop;i<a.path.length;i++){
+        const p=pos[a.path[i]];
+        d+=(i===a.hop?'M':'L')+p.x+','+p.y+' ';
+      }
+      v.pth.setAttribute('d',d);
+    }
+    v.pth.setAttribute('stroke',a.def.c);
+  });
+
+  updateThreatBars();updateCards();
+}
+function updateCards(){
+  document.querySelectorAll('.card').forEach(c=>{
+    const a=ACTIONS[c.dataset.k];
+    c.classList.toggle('no',G.ap<a.cost||a.cdt>0);
+    c.querySelector('.cd').style.height=(a.cdt>0?a.cdt/a.cd*100:0)+'%';
+  });
+}
+function renderThreats(){
+  const box=$('#threats');
+  $('#thN').textContent=G.attacks.length;
+  if(!G.attacks.length){box.innerHTML='<div class="empty">暂无活跃威胁</div>';return;}
+  box.innerHTML='';
+  G.attacks.forEach(a=>{
+    const cur=a.path[a.hop],tgt=a.target;
+    const d=document.createElement('div');
+    d.className='threat'+(a.hidden?' hid':'');
+    d.dataset.id=a.id;
+    const rec=recCard(a);
+    const showName=a.hidden?'未知威胁':a.def.n;
+    const showIcon=a.hidden?'❓':a.def.i;
+    let actHtml;
+    if(a.hidden){
+      actHtml=`<button class="th-act" data-act="hunt">🔎<b>调查 1</b></button>`;
+    }else if(rec){
+      actHtml=`<button class="th-act" data-act="${rec.k}">${rec.a.i}<b>${rec.a.cost+1} AP</b></button>`;
+    }else actHtml=`<button class="th-act" disabled>—<b>需研判</b></button>`;
+    d.innerHTML=`
+      <div class="th-ic">${showIcon}</div>
+      <div class="th-main">
+        <div class="th-t">${showName} <span class="ar">→</span> ${byId[cur].label}
+          <span class="ar">/ 目标</span> ${byId[tgt].label}</div>
+        <div class="th-bar"><i data-bar="${a.id}"
+          style="width:${(a.prog*100).toFixed(0)}%;background:${a.hidden?'#ff9f43':a.def.c}"></i></div>
+      </div>
+      ${G.hint?actHtml:`<button class="th-act" data-act="__locate">📍<b>定位</b></button>`}`;
+    d.addEventListener('click',e=>{
+      const b=e.target.closest('.th-act');
+      locate(a.path[a.hop]);
+      if(!b||b.disabled||!b.dataset.act)return;
+      e.stopPropagation();
+      if(b.dataset.act==='__locate')return;
+      if(b.dataset.act==='hunt'){
+        if(G.ap<1){toast('行动点不足','warn');return;}
+        G.ap-=1;a.hidden=false;renderThreats();
+        log(`🔎 调查完成，威胁已识别：${a.def.n}`,'ok');sfx(660,.12,'sine',.05);
+        return;
+      }
+      applyCard(a.path[a.hop],b.dataset.act,1);
+    });
+    box.appendChild(d);
+  });
+}
+function recCard(a){
+  if(a.hidden)return null;
+  for(const k of a.def.ct){
+    if(ACTIONS[k].cdt<=0)return{k,a:ACTIONS[k]};
+  }
+  return null;
+}
+function updateThreatBars(){
+  G.attacks.forEach(a=>{
+    const i=document.querySelector(`[data-bar="${a.id}"]`);
+    if(i)i.style.width=(Math.min(1,a.prog)*100).toFixed(0)+'%';
+  });
+}
+let locateT=0;
+function locate(id){
+  NODES.forEach(n=>NV[n.id].g.classList.remove('locate'));
+  NV[id].g.classList.add('locate');
+  clearTimeout(locateT);
+  locateT=setTimeout(()=>NV[id].g.classList.remove('locate'),1600);
+  G.sel=id;renderDev();
+}
+function renderDev(){
+  const box=$('#devInfo');
+  if(!G.sel){box.innerHTML='<div class="empty">点击拓扑节点查看详情</div>';return;}
+  const n=byId[G.sel],s=st[G.sel];
+  const q=s.qUntil>G.t,c=s.comp;
+  let stateTxt=q?'🔒 已隔离':(c?'💀 已失陷':'✅ 正常');
+  let stateCls=q?'':(c?'vk':'vs');
+  const vs=s.vulns.length?s.vulns.map(v=>`<span class="vchip">${VULN[v]}</span>`).join('')
+    :'<span class="vchip ok">已全面加固</span>';
+  box.innerHTML=`<div class="nm">${n.icon} ${n.label}</div>
+    <div class="mut">${CAT[n.cat]} · ${n.ip} · <span class="${stateCls}">${stateTxt}</span></div>
+    <div style="margin-top:4px">弱点：${vs}</div>`;
+}
+
+/* ==================== 13. 提示 / 卡片 ==================== */
+function showTip(n,e){
+  const s=st[n.id];
+  const q=s.qUntil>G.t;
+  const vs=s.vulns.length?s.vulns.map(v=>VULN[v]).join('、'):'已全面加固';
+  let stx=q?'🔒 已隔离':(s.comp?'💀 已失陷':'✅ 正常');
+  const atk=atkAt(n.id);
+  const atx=atk.length?`<div style="margin-top:3px">⚠ 正遭受：${atk.map(a=>a.hidden?'未知威胁':a.def.n).join('、')}</div>`:'';
+  $('#tip').innerHTML=`<div class="t">${n.icon} ${n.label}</div>
+    <div style="color:var(--muted)">${CAT[n.cat]} · ${n.ip}</div>
+    <div>状态：${stx}</div><div>弱点：${vs}</div>${atx}`;
+  $('#tip').style.display='block';moveTip(e);
+}
+function moveTip(e){
+  const t=$('#tip'),r=$('#stage').getBoundingClientRect();
+  let x=e.clientX-r.left+16,y=e.clientY-r.top+14;
+  if(x+t.offsetWidth>r.width-8)x=e.clientX-r.left-t.offsetWidth-14;
+  if(y+t.offsetHeight>r.height-8)y=e.clientY-r.top-t.offsetHeight-12;
+  t.style.left=x+'px';t.style.top=y+'px';
+}
+function hideTip(){$('#tip').style.display='none';}
+
+function buildCards(){
+  const box=$('#cards');
+  box.innerHTML='';
+  Object.entries(ACTIONS).forEach(([k,a])=>{
+    const c=document.createElement('div');
+    c.className='card';c.dataset.k=k;
+    c.innerHTML=`<div class="cd"></div><div class="ck">${a.k}</div>
+      <div class="ci">${a.i}</div><div class="cn">${a.n}</div>
+      <div class="cc">${a.cost} AP${a.cd>1?' · CD'+a.cd+'s':''}</div>`;
+    c.addEventListener('click',()=>setArmed(G.armed===k?null:k));
+    c.addEventListener('mouseenter',()=>{$('#cardTip').textContent=a.d;});
+    box.appendChild(c);
+  });
+}
+
+/* ==================== 14. 遮罩 ==================== */
+function showOv(html){$('#ovBox').innerHTML=html;$('#ov').classList.add('show');}
+function hideOv(){$('#ov').classList.remove('show');}
+function showStart(){
+  showOv(`<h2>🛡 SOC 攻防对抗演练</h2>
+  <p>你是一家企业的<b>安全管理员</b>。黑客正沿网络拓扑从外网逐跳渗透进来，
+  目标是数据库、文件服务器等核心资产。你有 <b>6 波攻击</b>要扛。</p>
+  <h3>怎么玩</h3>
+  <ul>
+    <li><b>备战阶段</b>（30s / 25s）：没有攻击，用行动点给设备<b>加固弱点</b>——弱点越少，后续攻击推进越慢。</li>
+    <li><b>交战阶段</b>：攻击沿虚线路径逐跳推进，每跳都要读条。读条满则该节点<b>失陷</b>，攻击继续深入。</li>
+    <li>选中一张<b>防御卡</b>（或按数字键），再点击目标节点即可施放。克制对了才能摧毁攻击。</li>
+    <li>也可以直接在右侧<b>威胁列表</b>点一键反制（便利性代价 +1 AP）。</li>
+    <li><b>前两跳几乎不掉血</b>（侦察期）。但勒索、0day、供应链这类会<b>沿途逐跳建立据点</b>，必须尽早拦！</li>
+    <li>失陷的设备会自发展开<b>横向移动</b>；数据库/文件服务器失陷后还会<b>数据外泄</b>。</li>
+  </ul>
+  <h3>注意</h3>
+  <ul>
+    <li>完整度归零即失败。扛过 6 波即胜利。</li>
+    <li>隔离主机是万能阻断，但核心设备被隔离会造成业务中断掉血。</li>
+    <li>IDS / SIEM / SOC 一旦失陷，你会<b>看不清</b>新攻击的类型，需花 1 AP 调查。</li>
+  </ul>
+  <div class="btnrow">
+    <button class="btn" onclick="startGame()">开始演练</button>
+    <button class="btn gh" onclick="showManual()">📖 攻防手册</button>
+  </div>`);
+}
+function showManual(){
+  const atkRows=Object.entries(ATTACKS).map(([k,a])=>
+    `<tr><td>${a.i} ${a.n}</td><td>${a.need?VULN[a.need]:'—'}</td>
+     <td>${a.hold?'持续占用':a.dmg}</td><td>${a.foothold?'<b>是</b>':'否'}</td>
+     <td>${a.ct.map(c=>ACTIONS[c].i+ACTIONS[c].n).join('、')}</td>
+     <td style="font-size:11px;color:#8098b8">${a.d}</td></tr>`).join('');
+  const actRows=Object.entries(ACTIONS).map(([k,a])=>
+    `<tr><td>${a.i} ${a.n}</td><td>${a.cost}</td>
+     <td>${a.cl.length?a.cl.map(v=>VULN[v]).join('、'):'<span style="color:#8098b8">万能</span>'}</td>
+     <td>${a.d}</td></tr>`).join('');
+  showOv(`<h2>📖 攻防手册</h2>
+  <h3>攻击方式 → 有效反制</h3>
+  <table><tr><th>攻击</th><th>利用弱点</th><th>终点伤害</th><th>沿途失陷</th><th>有效反制</th><th>说明</th></tr>
+  ${atkRows}</table>
+  <h3>防御手段</h3>
+  <table><tr><th>手段</th><th>消耗</th><th>可清除弱点</th><th>说明</th></tr>${actRows}</table>
+  <h3>伤害模型</h3>
+  <p>第 1–2 跳为<b>侦察期，零伤害</b>；第 3 跳起每跳仅 0.12 倍伤害；<b>终点造成全额伤害</b>。
+  因此不必对每一起攻击都立刻响应——优先处理会沿途建立据点的类型。</p>
+  <div class="btnrow"><button class="btn" onclick="closeManual()">返回</button></div>`);
+}
+function closeManual(){ backOv(); }
+function showResult(win){
+  const s=G.stats;
+  const dmgEnt=Object.entries(s.dmg).sort((a,b)=>b[1]-a[1]);
+  const worst=dmgEnt.length?`${ATTACKS[dmgEnt[0][0]].i} ${ATTACKS[dmgEnt[0][0]].n}（${dmgEnt[0][1].toFixed(1)} 伤害）`:'无';
+  const safe=NODES.filter(n=>!s.comp.has(n.id)&&!isExt(n.id)).length;
+  const tot=NODES.filter(n=>!isExt(n.id)).length;
+  let rank='D',rc='#ff4d6d';
+  if(win){
+    if(G.score>=8000){rank='S';rc='#ffd166';}
+    else if(G.score>=5500){rank='A';rc='#4cd964';}
+    else if(G.score>=3500){rank='B';rc='#2bd9c9';}
+    else if(G.score>=1800){rank='C';rc='#4aa3ff';}
+    else{rank='D';rc='#ff4d6d';}
+  }else{rank='F';rc='#ff4d6d';}
+  const rec=dmgEnt.slice(0,3).map(([k])=>{
+    const a=ATTACKS[k];
+    return `${a.ct.map(c=>ACTIONS[c].n).join('/')}（防 ${a.n}）`;
+  }).join('　→　')||'—';
+  showOv(`<h2>${win?'🎉 演练成功':'💀 防线失守'}</h2>
+  <p>${win?`你成功扛过了全部 ${WAVE_COUNT} 波攻击。`:`企业完整度归零，防线在第 ${G.wave} 波被击穿。`}</p>
+  <div class="rank" style="color:${rc}">${rank}</div>
+  <div class="kv2">
+    <div><b>${G.score}</b>总得分</div>
+    <div><b>${Math.ceil(G.hp)}</b>剩余完整度</div>
+    <div><b>${s.blocked}</b>成功阻断攻击数</div>
+    <div><b>${s.hardened}</b>消除弱点数</div>
+    <div><b>${safe}/${tot}</b>从未失陷的设备</div>
+    <div><b>${s.leaks}</b>攻击得手次数</div>
+    <div><b>${s.holds}</b>DDoS 占用次数</div>
+    <div><b>${s.exfils}</b>数据外泄成功次数</div>
+    <div><b>${s.isolates}</b>隔离处置次数</div>
+    <div><b>${s.inv}</b>无效处置次数</div>
+  </div>
+  <h3>最致命的攻击类型</h3><p>${worst}</p>
+  <h3>建议优先加固</h3><p>${rec}</p>
+  <div class="btnrow">
+    <button class="btn" onclick="startGame()">再来一次</button>
+    <button class="btn gh" onclick="showManual()">📖 查看手册</button>
+  </div>`);
+  sfx(win?880:120,.5,win?'triangle':'sawtooth',.06);
+}
+
+/* ==================== 15. 缩放平移 ==================== */
+const svg=$('#svg'),vp=$('#viewport');
+let sc=1,tx=0,ty=0;
+const applyT=()=>vp.setAttribute('transform',`translate(${tx},${ty}) scale(${sc})`);
+svg.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=svg.getBoundingClientRect();
+  const mx=(e.clientX-r.left)/r.width*1700,my=(e.clientY-r.top)/r.height*1080;
+  const f=e.deltaY<0?1.13:1/1.13;
+  const ns=Math.min(3,Math.max(.45,sc*f));
+  tx=mx-(mx-tx)*(ns/sc);ty=my-(my-ty)*(ns/sc);sc=ns;applyT();
+},{passive:false});
+let drag=false,sx,sy,moved=0;
+svg.addEventListener('mousedown',e=>{drag=true;moved=0;sx=e.clientX-tx;sy=e.clientY-ty;
+  svg.classList.add('grabbing');hideTip();});
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const nx=e.clientX-sx,ny=e.clientY-sy;
+  moved+=Math.abs(nx-tx)+Math.abs(ny-ty);tx=nx;ty=ny;applyT();
+});
+window.addEventListener('mouseup',()=>{drag=false;svg.classList.remove('grabbing');});
+svg.addEventListener('click',e=>{
+  if(moved>6)return;
+  if(G.armed)setArmed(null);
+});
+$('#bFs').onclick=()=>{
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+};
+
+/* ==================== 16. 控制 ==================== */
+function updatePauseBtn(){
+  $('#bPause').textContent=G.paused?'▶ 继续':'⏸ 暂停';
+  $('#bPause').classList.toggle('on',G.paused);
+}
+function showPauseOv(){
+  showOv(`<h2>⏸ 已暂停</h2>
+    <p>第 ${G.wave} 波 · 完整度 ${Math.ceil(G.hp)} · 得分 ${G.score}</p>
+    <div class="btnrow">
+      <button class="btn" onclick="togglePause()">继续</button>
+      <button class="btn gh" onclick="showManual()">📖 攻防手册</button>
+      <button class="btn gh" onclick="askRestart()">重新开始</button>
+    </div>`);
+}
+let wasPaused=false;                       // 打开临时弹窗前的暂停状态，用于返回时还原
+function togglePause(){
+  if(G.phase==='menu'||G.phase==='over')return;
+  G.paused=!G.paused;updatePauseBtn();
+  if(G.paused)showPauseOv();else hideOv();
+}
+// 返回上一层：恢复进入弹窗前的暂停状态，避免游戏卡在暂停且无恢复入口
+function backOv(){
+  if(G.phase==='menu'){showStart();return;}
+  G.paused=wasPaused;updatePauseBtn();
+  if(wasPaused)showPauseOv();else hideOv();
+}
+function askRestart(){
+  if(G.phase!=='menu'&&G.phase!=='over'){G.paused=true;updatePauseBtn();}
+  showOv(`<h2>重新开始？</h2><p>当前进度将丢失。</p>
+    <div class="btnrow"><button class="btn" onclick="startGame()">确认重开</button>
+    <button class="btn gh" onclick="backOv()">取消</button></div>`);
+}
+$('#bPause').onclick=togglePause;
+$('#bManual').onclick=()=>{
+  wasPaused=G.paused;
+  if(G.phase!=='menu'&&G.phase!=='over'){G.paused=true;updatePauseBtn();}
+  showManual();
+};
+$('#bHint').onclick=function(){G.hint=!G.hint;this.classList.toggle('on',G.hint);renderThreats();};
+$('#bSfx').onclick=function(){G.sfx=!G.sfx;this.classList.toggle('on',G.sfx);};
+$('#bRestart').onclick=askRestart;
+window.addEventListener('keydown',e=>{
+  if(e.key===' '){e.preventDefault();togglePause();return;}
+  if(e.key==='Escape'){setArmed(null);if($('#ov').classList.contains('show')
+    &&G.phase!=='menu'&&G.phase!=='over'&&!G.paused)hideOv();return;}
+  if(G.phase==='menu'||G.phase==='over')return;
+  const ak=Object.keys(ACTIONS).find(k=>ACTIONS[k].k===e.key);
+  if(ak){setArmed(G.armed===ak?null:ak);return;}
+  if(e.key.toLowerCase()==='h'){showManual();}
+  if(e.key==='Tab'){
+    e.preventDefault();
+    if(G.attacks.length){
+      const i=(G.attacks.findIndex(a=>a.path[a.hop]===G.sel)+1)%G.attacks.length;
+      locate(G.attacks[i].path[G.attacks[i].hop]);
+    }
+  }
+});
+
+/* ==================== 17. 启动 ==================== */
+buildCards();renderThreats();renderDev();showStart();
+let last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const raw=Math.min(60,now-last);last=now;
+  if(!G.paused&&G.phase!=='menu'&&G.phase!=='over'){
+    G.t+=raw;update(raw/1000);
+    if(G.armed)updateArmHints();
+  }
+  render();
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
