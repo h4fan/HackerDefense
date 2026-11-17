@@ -75,6 +75,35 @@ svg.grabbing{cursor:grabbing;}
   fill:#fff;paint-order:stroke;stroke:#000;stroke-width:3.5;}
 .locate-ring{fill:none;stroke:#fff;stroke-width:3;}
 
+/* 节点快捷操作面板 */
+#nodePanel{position:absolute;z-index:24;width:302px;max-height:min(78vh,570px);
+  overflow-y:auto;background:rgba(10,18,32,.985);border:1.5px solid var(--accent);
+  border-radius:12px;padding:9px 10px 10px;box-shadow:0 12px 34px rgba(0,0,0,.72);
+  display:none;pointer-events:auto;}
+#nodePanel.show{display:block;animation:tin .18s;}
+#nodePanel .nph{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;
+  padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid var(--line);}
+#nodePanel .nph .x{margin-left:auto;cursor:pointer;color:var(--muted);font-size:15px;
+  line-height:1;padding:0 5px;border-radius:5px;}
+#nodePanel .nph .x:hover{color:var(--bad);background:#2a1420;}
+#nodePanel .nps{font-size:10.5px;color:var(--muted);margin-bottom:6px;line-height:1.5;}
+#nodePanel .npl{font-size:10px;color:var(--muted);letter-spacing:.5px;margin:7px 0 5px;}
+#nodePanel .npv{display:inline-block;font-size:10px;padding:2px 7px;border-radius:9px;
+  margin:0 3px 4px 0;border:1px solid var(--warn);color:var(--warn);cursor:pointer;}
+#nodePanel .npv:hover{background:rgba(255,159,67,.18);}
+#nodePanel .npv.done{border-color:var(--ok);color:var(--ok);cursor:default;}
+.npbtn{display:flex;align-items:center;gap:6px;width:100%;text-align:left;
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  padding:5px 8px;margin-bottom:5px;cursor:pointer;color:var(--txt);transition:.12s;}
+.npbtn:hover{border-color:var(--accent);background:#22365a;}
+.npbtn.no{opacity:.4;cursor:not-allowed;}
+.npbtn .i{font-size:16px;width:20px;text-align:center;flex:none;}
+.npbtn .nm{font-size:11.5px;font-weight:700;flex:1;line-height:1.3;}
+.npbtn .nm small{display:block;font-weight:400;font-size:9.5px;color:var(--muted);}
+.npbtn .cost{font-size:10px;color:var(--accent);white-space:nowrap;}
+.npbtn .tag{font-size:9px;padding:1px 5px;border-radius:7px;background:#0c1526;color:var(--ok);}
+.npbtn.rec{border-color:rgba(76,217,100,.6);box-shadow:inset 0 0 0 1px rgba(76,217,100,.16);}
+
 #tip{position:absolute;pointer-events:none;background:rgba(8,14,26,.97);
   border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;
   line-height:1.55;max-width:250px;z-index:20;display:none;box-shadow:0 8px 26px rgba(0,0,0,.6);}
@@ -176,6 +205,99 @@ th{background:#0c1526;color:var(--muted);font-size:11px;}
   font-size:12.5px;}
 .kv2 b{color:var(--accent);font-size:16px;display:block;}
 .rank{font-size:52px;font-weight:900;text-align:center;margin:8px 0;}
+
+/* ============ 改进：速度控制 / 情报 / 强化 / 飘字 ============ */
+.tools button.spd{min-width:34px;padding:5px 7px;}
+.tools button.spd.on{background:#2bd9c9;border-color:#2bd9c9;color:#04121a;}
+.tools button.assist.on{background:#b06bff;border-color:#b06bff;color:#0b1220;}
+
+/* 情报预警面板 */
+#intelPanel{position:absolute;top:12px;right:14px;z-index:15;width:236px;
+  background:rgba(12,22,40,.94);border:1px solid var(--warn);border-radius:11px;
+  padding:9px 11px;box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:11.5px;
+  pointer-events:none;line-height:1.5;display:none;}
+#intelPanel.show{display:block;animation:tin .28s;}
+#intelPanel .ih{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--warn);
+  display:flex;align-items:center;gap:5px;margin-bottom:6px;}
+#intelPanel .ih .cnt{margin-left:auto;color:var(--txt);}
+.intel-row{display:flex;align-items:center;gap:6px;padding:2.5px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);}
+.intel-row:last-child{border-bottom:0;}
+.intel-row .ii{font-size:14px;width:18px;text-align:center;}
+.intel-row .in{font-weight:700;flex:1;}
+.intel-row .ic{font-size:10px;color:var(--ok);}
+.intel-row .ic.none{color:var(--muted);}
+.intel-tip{margin-top:6px;font-size:10.5px;color:var(--muted);border-top:1px solid var(--line);
+  padding-top:5px;}
+
+/* 飘字 */
+.float{position:absolute;z-index:30;pointer-events:none;font-weight:900;font-size:17px;
+  text-shadow:0 2px 8px rgba(0,0,0,.85),0 0 2px #000;transform:translate(-50%,-50%);
+  animation:fly 1.05s cubic-bezier(.2,.7,.3,1) forwards;white-space:nowrap;}
+.float.dmg{color:#ff5c5c;}
+.float.score{color:#ffd166;font-size:15px;}
+.float.heal{color:#4cd964;}
+@keyframes fly{0%{opacity:0;transform:translate(-50%,-30%) scale(.6);}
+  15%{opacity:1;transform:translate(-50%,-60%) scale(1.15);}
+  100%{opacity:0;transform:translate(-50%,-190%) scale(1);}}
+
+/* 强化三选一 */
+.upgrade-card{flex:1;min-width:0;background:var(--panel2);border:2px solid var(--line);
+  border-radius:13px;padding:16px 12px 14px;cursor:pointer;text-align:center;
+  transition:.16s;position:relative;overflow:hidden;}
+.upgrade-card:hover{transform:translateY(-5px);border-color:var(--accent);
+  box-shadow:0 10px 30px rgba(0,0,0,.55);}
+.upgrade-card .ui{font-size:38px;line-height:1.1;}
+.upgrade-card .un{font-size:14px;font-weight:800;margin:8px 0 4px;}
+.upgrade-card .ud{font-size:11.5px;color:#b9c9de;line-height:1.55;min-height:36px;}
+.upgrade-card .ur{position:absolute;top:8px;right:9px;font-size:9px;font-weight:800;
+  padding:2px 7px;border-radius:8px;letter-spacing:.5px;}
+.ur.common{background:#1c3055;color:#7fa8d8;}
+.ur.rare{background:#3a2560;color:#c98aff;}
+.ur.epic{background:#5a3a12;color:#ffcf5c;}
+.upgrade-row{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;}
+.up-hint{font-size:11px;color:var(--muted);text-align:center;margin-top:14px;}
+
+/* 难度选择 */
+.diff-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+.diff-card{flex:1;min-width:150px;background:var(--panel2);border:2px solid var(--line);
+  border-radius:12px;padding:11px 13px;cursor:pointer;transition:.15s;}
+.diff-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+.diff-card.on{border-color:var(--accent);background:#22365a;
+  box-shadow:0 0 0 2px rgba(255,209,102,.22);}
+.diff-card .dn{font-size:14px;font-weight:800;}
+.diff-card .dd{font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px;}
+
+/* 成就提示 */
+#achToast{position:absolute;right:14px;bottom:14px;z-index:70;display:flex;
+  flex-direction:column;gap:7px;align-items:flex-end;pointer-events:none;}
+.ach{background:linear-gradient(90deg,#2a2410,#3a2c12);border:1px solid var(--accent);
+  border-radius:10px;padding:8px 13px;box-shadow:0 8px 24px rgba(0,0,0,.6);
+  animation:achin .4s;max-width:260px;}
+.ach .at{font-size:10px;color:var(--accent);font-weight:800;letter-spacing:1px;}
+.ach .an{font-size:12.5px;font-weight:700;margin-top:2px;}
+.ach .ad{font-size:10.5px;color:#cbb98a;margin-top:2px;}
+@keyframes achin{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:none;}}
+
+/* HUD 升级徽标 */
+.ubadge{display:inline-flex;align-items:center;gap:3px;}
+.ubadge .dot{width:7px;height:7px;border-radius:50%;background:#b06bff;
+  box-shadow:0 0 6px #b06bff;}
+
+/* 智能助手提示条 */
+.assist-tip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:16;
+  background:rgba(12,22,40,.95);border:1px solid #b06bff;border-radius:20px;
+  padding:7px 16px;font-size:11.5px;color:#d9c2ff;pointer-events:none;
+  display:none;box-shadow:0 6px 20px rgba(0,0,0,.5);}
+.assist-tip.show{display:block;animation:tin .3s;}
+
+/* 提前开战按钮 */
+#bStartWave{position:absolute;top:46px;left:14px;z-index:16;display:none;
+  background:rgba(18,34,58,.96);border:1px solid var(--warn);color:var(--warn);
+  border-radius:18px;padding:5px 13px;font-size:11.5px;font-weight:800;
+  cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45);letter-spacing:.5px;}
+#bStartWave:hover{background:var(--warn);color:#0b1220;}
+#bStartWave.show{display:block;animation:tin .28s;}
 </style>
 </head>
 <body>
@@ -190,11 +312,16 @@ th{background:#0c1526;color:var(--muted);font-size:11px;}
         <div class="bar"><i id="bAp" style="width:100%"></i></div></div>
       <div class="chip">得分 <b id="hScore">0</b></div>
       <div class="chip">连击 <b id="hCombo">×1.0</b></div>
+      <div class="chip ubadge"><span class="dot"></span>强化 <b id="hUp">0</b></div>
     </div>
     <div class="tools">
+      <button class="spd" data-spd="1">1×</button>
+      <button class="spd on" data-spd="2">2×</button>
+      <button class="spd" data-spd="4">4×</button>
       <button id="bPause">⏸ 暂停</button>
       <button id="bManual">📖 手册</button>
       <button id="bHint" class="on">💡 提示</button>
+      <button id="bAuto" class="assist">🩹 智能加固</button>
       <button id="bSfx" class="on">🔊 音效</button>
       <button id="bFs">⛶ 全屏</button>
       <button id="bRestart">🔄 重开</button>
@@ -213,6 +340,11 @@ th{background:#0c1526;color:var(--muted);font-size:11px;}
         </g>
       </svg>
       <div id="phaseTag" class="prep">准备中</div>
+      <button id="bStartWave">⚔ 提前开战</button>
+      <div id="nodePanel"></div>
+      <div id="intelPanel"></div>
+      <div class="assist-tip" id="assistTip"></div>
+      <div id="achToast"></div>
       <div id="tip"></div>
       <div id="toast"></div>
     </div>
@@ -410,11 +542,70 @@ const WAVE_POOL=[
 const WAVE_PROG=[1.0,0.92,0.85,0.79,0.73,0.68];
 const MAX_ALIVE=8, ATK_LIFE=60;
 
+/* ==================== 3.5 改进系统配置 ==================== */
+const DIFFICULTY={
+  easy:{n:'🌱 轻松',hp:150,ap:16,atk:0.8,prog:1.25,dmg:0.75,
+    desc:'完整度与行动点更充裕，攻击节奏较慢。适合熟悉玩法。'},
+  normal:{n:'⚔ 标准',hp:120,ap:13,atk:1,prog:1,dmg:1,
+    desc:'原汁原味的 6 波攻防对抗，考验资源调度。'},
+  hard:{n:'🔥 困难',hp:100,ap:11,atk:1.2,prog:0.88,dmg:1.25,
+    desc:'攻击更密集、推进更快、伤害更高，行动点紧张。'},
+  insane:{n:'☠ 噩梦',hp:80,ap:10,atk:1.45,prog:0.75,dmg:1.5,
+    desc:'为资深玩家准备的地狱难度，一步失误满盘皆输。'},
+};
+/* 波间强化卡池：apply 在选中时执行，max 限制可叠加次数 */
+const UPGRADES=[
+  {id:'regen',i:'⚡',n:'自适应供电',r:'common',max:3,d:'行动点恢复速度 +30%',
+    apply:()=>{G.up.regen+=0.3;}},
+  {id:'apmax',i:'🔋',n:'扩容电池',r:'common',max:3,d:'行动点上限 +4，并立即回满',
+    apply:()=>{G.apMax+=4;G.ap=G.apMax;}},
+  {id:'hp',i:'💚',n:'冗余架构',r:'common',max:4,d:'完整度上限 +25，立即恢复 25',
+    apply:()=>{G.hpMax+=25;G.hp=Math.min(G.hpMax,G.hp+25);}},
+  {id:'heal',i:'🩹',n:'自动修复',r:'rare',max:3,d:'每波结束额外恢复 12 完整度',
+    apply:()=>{G.up.heal+=12;}},
+  {id:'score',i:'🎯',n:'精准反制',r:'common',max:3,d:'阻断攻击得分 +50%',
+    apply:()=>{G.up.blockScore+=0.5;}},
+  {id:'clean',i:'🧹',n:'自动编排',r:'rare',max:2,d:'每波开始自动净化 2 台失陷设备',
+    apply:()=>{G.up.autoClean+=2;}},
+  {id:'slow',i:'🐌',n:'流量整形',r:'rare',max:3,d:'所有攻击推进速度降低 12%（读条更慢）',
+    apply:()=>{G.up.slow+=0.12;}},
+  {id:'nofee',i:'🆓',n:'自动化编排',r:'rare',max:1,d:'威胁列表一键反制不再额外消耗行动点',
+    apply:()=>{G.up.noFee=true;}},
+  {id:'combo',i:'🔥',n:'连击专家',r:'common',max:3,d:'连击加成增速翻倍，上限 +0.4',
+    apply:()=>{G.up.comboUp+=1;}},
+  {id:'cheap',i:'🛠',n:'批量运维',r:'common',max:2,d:'加固类卡牌消耗 -1 AP（最低 1）',
+    apply:()=>{G.up.cheapen+=1;}},
+  {id:'armor',i:'🛡',n:'弹性防护',r:'epic',max:2,d:'受到的所有伤害 -20%',
+    apply:()=>{G.up.dmgReduce+=0.2;}},
+  {id:'intel',i:'🔮',n:'威胁情报',r:'common',max:1,d:'情报预警显示每类攻击的推荐反制手段',
+    apply:()=>{G.up.intel=true;}},
+];
+const ACHIEVEMENTS={
+  firstBlock:{n:'首战告捷',i:'🎯',d:'成功阻断第一次攻击'},
+  combo10:{n:'连锁防御',i:'🔥',d:'达成 10 连击'},
+  flawless:{n:'铜墙铁壁',i:'🧱',d:'某一波结束时无一设备失陷'},
+  noLeak:{n:'数据守护者',i:'🔒',d:'通关且从未发生数据外泄'},
+  hardcore:{n:'硬核防线',i:'💀',d:'在困难或噩梦难度下通关'},
+  rich:{n:'安全专家',i:'🏆',d:'单局得分达到 8000'},
+  collector:{n:'加固大师',i:'🛠',d:'单局消除 30 个弱点'},
+  survivor:{n:'极限求生',i:'🩸',d:'完整度低于 20 时通关'},
+};
+const SAVE_KEY='hackerdefense_v2';
+function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}
+  catch(e){return{};}}
+const SAVE=loadSave();
+SAVE.best=SAVE.best||0; SAVE.wins=SAVE.wins||0; SAVE.plays=SAVE.plays||0;
+SAVE.ach=SAVE.ach||[]; SAVE.diff=SAVE.diff||'normal';
+function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SAVE));}catch(e){}}
+
 /* ==================== 4. 状态 ==================== */
+const freshUp=()=>({regen:0,heal:0,blockScore:0,autoClean:0,slow:0,noFee:false,
+  comboUp:0,cheapen:0,dmgReduce:0,intel:false});
 const G={
   t:0,phase:'menu',wave:0,hp:120,hpMax:120,ap:13,apMax:13,score:0,combo:0,
   attacks:[],queue:[],waveT:0,prepT:0,ddosHold:0,paused:false,
   hint:true,sfx:true,armed:null,sel:null,
+  speed:2,diff:'normal',auto:false,up:freshUp(),upLog:[],
   stats:{comp:new Set(),dmg:{},leaks:0,holds:0,exfils:0,blocked:0,hardened:0,isolates:0,inv:0},
 };
 const st={};
@@ -502,11 +693,14 @@ function flash(){
 }
 function damage(v){
   if(v<=0)return;
+  v*=DIFFICULTY[G.diff].dmg*(1-G.up.dmgReduce);
+  if(v<=0)return;
   G.hp=Math.max(0,G.hp-v); G.combo=0; flash();
+  floatTxt('-'+v.toFixed(v<10?1:0),'dmg');
   if(G.hp<=0&&G.phase!=='over'&&G.phase!=='menu') gameOver(false);
 }
-function comboMul(){return Math.min(2,1+G.combo*0.05);}
-function score(v){G.score=Math.max(0,G.score+Math.round(v*comboMul()));}
+function comboMul(){return Math.min(2+G.up.comboUp*0.4,1+G.combo*0.05*(1+G.up.comboUp));}
+function score(v){const n=Math.round(v*comboMul());G.score=Math.max(0,G.score+n);return n;}
 
 let ac=null;
 function sfx(f,dur,type='sine',vol=.05){
@@ -519,6 +713,124 @@ function sfx(f,dur,type='sine',vol=.05){
     g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);
     o.stop(ac.currentTime+dur);
   }catch(e){}
+}
+
+/* ==================== 6.5 改进系统函数 ==================== */
+let lastFloat={};
+function floatTxt(txt,cls,nodeId){
+  const key=cls+(nodeId||'');
+  if(G.t-(lastFloat[key]||-9999)<450)return;
+  lastFloat[key]=G.t;
+  const g=nodeId&&NV[nodeId]&&NV[nodeId].g,stage=$('#stage'),sr=stage.getBoundingClientRect();
+  let x=sr.width/2,y=sr.height/2;
+  if(g){const r=g.getBoundingClientRect();x=r.left+r.width/2-sr.left;y=r.top+r.height/2-sr.top;}
+  const d=document.createElement('div');d.className='float '+cls;d.textContent=txt;
+  d.style.left=x+'px';d.style.top=(y-14)+'px';
+  stage.appendChild(d);setTimeout(()=>d.remove(),1100);
+}
+function unlock(id){
+  if(SAVE.ach.includes(id)||!ACHIEVEMENTS[id])return;
+  const a=ACHIEVEMENTS[id];SAVE.ach.push(id);persist();
+  const box=$('#achToast'),d=document.createElement('div');d.className='ach';
+  d.innerHTML=`<div class="at">🏅 成就解锁</div><div class="an">${a.i} ${a.n}</div>
+    <div class="ad">${a.d}</div>`;
+  box.appendChild(d);setTimeout(()=>d.remove(),4000);
+  sfx(880,.18,'sine',.04);sfx(1180,.22,'sine',.03);
+}
+let lastIntelKey='';
+function renderIntel(){
+  const box=$('#intelPanel');
+  if(G.phase!=='prep'||G.wave>=WAVE_COUNT){box.classList.remove('show');lastIntelKey='';return;}
+  const key=G.wave+'|'+G.up.intel+'|'+G.diff;
+  if(key===lastIntelKey)return;
+  lastIntelKey=key;
+  const pool=WAVE_POOL[G.wave]||[];
+  const cnt=Math.round((WAVE_ATK[G.wave]||5)*DIFFICULTY[G.diff].atk);
+  let html=`<div class="ih">🔮 下一波情报<span class="cnt">第 ${G.wave+1} 波 · 约 ${cnt} 起</span></div>`;
+  const seen=[];
+  pool.forEach(t=>{
+    if(seen.includes(t))return;seen.push(t);
+    const a=ATTACKS[t];
+    let ct='';
+    if(G.up.intel)ct=a.ct.map(c=>ACTIONS[c].n).join('/');
+    else ct=a.need?'弱点·'+VULN[a.need]:'需研判';
+    html+=`<div class="intel-row"><span class="ii">${a.i}</span>
+      <span class="in">${a.n}</span><span class="ic ${G.up.intel?'':'none'}">${ct}</span></div>`;
+  });
+  html+=`<div class="intel-tip">${G.up.intel?'已掌握反制手段，可针对性部署卡牌':'选择「威胁情报」强化可查看反制建议'}</div>`;
+  box.innerHTML=html;box.classList.add('show');
+}
+function cardForVuln(v){
+  for(const k in ACTIONS)if(ACTIONS[k].cl.includes(v))return k;
+  return null;
+}
+function autoHarden(){
+  if(G.phase!=='prep'&&G.phase!=='wave'){toast('当前阶段无法加固','warn');return;}
+  const pool=WAVE_POOL[Math.min(G.wave,WAVE_COUNT-1)]||[];
+  const need={};pool.forEach(t=>{const a=ATTACKS[t];if(a.need)need[a.need]=(need[a.need]||0)+2;});
+  const cand=[];
+  NODES.forEach(n=>{
+    if(isExt(n.id))return;
+    const s=st[n.id];if(s.comp||s.qUntil>G.t)return;
+    s.vulns.forEach(v=>{
+      const k=cardForVuln(v);if(!k)return;
+      const cost=Math.max(1,ACTIONS[k].cost-G.up.cheapen);
+      if(G.ap-cost<2)return;                 // 保留至少 2 AP 应对突发
+      cand.push({id:n.id,k,v,cost,
+        score:(need[v]||1)*(CORE_CATS.includes(n.cat)?1.7:1)
+          +(['db','file','backup','app'].includes(n.id)?1.2:0)});
+    });
+  });
+  cand.sort((a,b)=>b.score-a.score);
+  let done=0;
+  for(const c of cand){
+    if(G.ap-c.cost<2)continue;
+    const s=st[c.id];
+    if(!s.vulns.includes(c.v))continue;
+    G.ap-=c.cost;
+    const a=ACTIONS[c.k];
+    s.vulns=s.vulns.filter(v=>!a.cl.includes(v));
+    score(40);G.stats.hardened++;done++;
+    floatTxt('加固 -'+c.cost,'score',c.id);
+    if(done>=6)break;
+  }
+  if(done){sfx(680,.14,'triangle',.05);
+    log(`🛠 智能加固：已消除 ${done} 处弱点，耗费 ${cand.slice(0,done).reduce((s,c)=>s+c.cost,0)} AP`,'ok');
+    toast(`智能加固完成：${done} 处弱点`,'ok');
+    renderDev();renderThreats();
+  }else toast('暂无可加固目标或行动点不足','warn');
+}
+function rollUpgrades(){
+  const avail=UPGRADES.filter(u=>G.upLog.filter(x=>x===u.id).length<u.max);
+  const pool=[];avail.forEach(u=>{const w=u.r==='common'?4:u.r==='rare'?2:1;
+    for(let i=0;i<w;i++)pool.push(u);});
+  const out=[];
+  while(out.length<3&&pool.length){
+    const u=rnd(pool);if(out.some(x=>x.id===u.id))continue;out.push(u);
+  }
+  return out;
+}
+function showUpgrade(){
+  const opts=rollUpgrades();
+  if(!opts.length){G.phase='prep';G.prepT=25;return;}
+  G.paused=true;wasPaused=false;updatePauseBtn();
+  showOv(`<h2>⭐ 波次强化</h2>
+    <p>第 ${G.wave} 波已守住！选择一项本局永久强化，应对更猛烈的后续攻击。</p>
+    <div class="upgrade-row">${opts.map(u=>`
+      <div class="upgrade-card" onclick="pickUpgrade('${u.id}')">
+        <div class="ur ${u.r}">${u.r==='epic'?'史诗':u.r==='rare'?'稀有':'普通'}</div>
+        <div class="ui">${u.i}</div><div class="un">${u.n}</div><div class="ud">${u.d}</div>
+      </div>`).join('')}</div>
+    <div class="up-hint">当前已获得 ${G.upLog.length} 项强化 · 点击卡片继续</div>`);
+}
+function pickUpgrade(id){
+  const u=UPGRADES.find(x=>x.id===id);if(!u)return;
+  u.apply();G.upLog.push(id);
+  sfx(760,.2,'triangle',.05);
+  log(`⭐ 获得强化：${u.i} ${u.n} —— ${u.d}`,'ok');
+  toast(`${u.i} 强化：${u.n}`,'ok');
+  G.phase='prep';G.prepT=25;
+  G.paused=false;updatePauseBtn();hideOv();renderIntel();renderDev();setSpeed(G.speed,true);
 }
 
 /* ==================== 7. 寻路 ==================== */
@@ -583,7 +895,7 @@ function hiddenChance(){
 function nodeProgTime(def,id){
   if(isExt(id))return 0.75;
   const s=st[id];
-  let t=def.prog*(WAVE_PROG[G.wave-1]||1);
+  let t=def.prog*(WAVE_PROG[G.wave-1]||1)*DIFFICULTY[G.diff].prog*(1+G.up.slow);
   if(def.need&&s.vulns.includes(def.need))t*=0.62;
   else if(s.vulns.length===0)t*=1.45;
   if(s.comp)t*=0.6;
@@ -629,10 +941,15 @@ function rmAtk(a){
   rmAtkVis(a); renderThreats();
 }
 function blockAtk(a,why){
-  log(`✅ ${a.hidden?'未知威胁':a.def.n} 被阻断（${why}） +60`,'ok');
-  score(60);G.combo++;G.stats.blocked++;
+  const pt=a.path[a.hop];
+  const gain=score(60*(1+G.up.blockScore));
+  log(`✅ ${a.hidden?'未知威胁':a.def.n} 被阻断（${why}） +${gain}`,'ok');
+  G.combo++;G.stats.blocked++;
   G.hp=Math.min(G.hpMax,G.hp+1);
+  floatTxt('阻断 +'+gain,'score',pt);
   sfx(720,.14,'square',.045);
+  if(G.stats.blocked===1)unlock('firstBlock');
+  if(G.combo>=10)unlock('combo10');
   rmAtk(a);
 }
 function finishObj(a,cur){
@@ -699,10 +1016,85 @@ function resolveTimeout(a){
 /* ==================== 9. 卡牌结算 ==================== */
 function onNodeClick(id){
   G.sel=id; renderDev();
-  if(!G.armed)return;
+  if(!G.armed){npOpen=id;npSig='';renderNodePanel();return;}
   applyCard(id,G.armed);
   if(!G.keepArmed)setArmed(null);
+  npOpen=id;npSig='';renderNodePanel();
 }
+/* ---- 节点旁快捷面板 ---- */
+let npOpen=null,npSig='';
+function effCost(k){
+  const d=(k==='isolate'||k==='restore')?0:G.up.cheapen;
+  return Math.max(1,ACTIONS[k].cost-d);
+}
+function hideNodePanel(){npOpen=null;npSig='';$('#nodePanel').classList.remove('show');}
+function placeNodePanel(){
+  const p=$('#nodePanel');if(!npOpen||!p.classList.contains('show'))return;
+  const g=NV[npOpen]&&NV[npOpen].g;if(!g)return;
+  const r=g.getBoundingClientRect(),sr=$('#stage').getBoundingClientRect();
+  const pw=p.offsetWidth,ph=p.offsetHeight;
+  let x=r.right-sr.left+12,y=r.top-sr.top-6;
+  if(x+pw>sr.width-6)x=r.left-sr.left-pw-12;
+  if(x<6)x=6;
+  y=Math.max(6,Math.min(y,sr.height-ph-6));
+  p.style.left=x+'px';p.style.top=y+'px';
+}
+function nodeSig(){
+  if(!npOpen)return'';
+  const s=st[npOpen],a=atkAt(npOpen);
+  return[npOpen,s.comp?'1':'0',s.qUntil>G.t?'1':'0',s.vulns.join(','),Math.floor(G.ap),
+    a.map(x=>x.id+(x.hidden?'h':'v')).join('|'),
+    Object.keys(ACTIONS).map(k=>ACTIONS[k].cdt>0?'1':'0').join('')].join('#');
+}
+function renderNodePanel(){
+  const p=$('#nodePanel');
+  if(!npOpen||G.phase==='menu'||G.phase==='over'){p.classList.remove('show');return;}
+  const id=npOpen,n=byId[id],s=st[id],atks=atkAt(id);
+  const q=s.qUntil>G.t,c=s.comp;
+  const state=q?'🔒 已隔离':(c?'💀 已失陷':'✅ 正常');
+  let html=`<div class="nph">${n.icon} ${n.label}<span class="x" data-npclose title="关闭">✕</span></div>
+    <div class="nps">${CAT[n.cat]} · ${n.ip} · ${state}</div>`;
+  if(isExt(id)){
+    html+='<div class="npl">外部网络节点，无法直接处置</div>';
+  }else{
+    if(atks.length){
+      html+='<div class="npl">🚨 当前威胁 · 点击反制</div>';
+      html+=atks.map(a=>{
+        const rec=a.hidden?{k:'hunt',a:ACTIONS.hunt,name:'未知威胁'}:
+          (recCard(a)?{k:recCard(a).k,a:recCard(a).a,name:a.def.n}:null);
+        if(!rec)return `<div class="npbtn no"><span class="i">${a.def.i}</span>
+          <div class="nm">${a.def.n}<small>抵达 ${byId[a.target].label}</small></div>
+          <span class="cost">需研判</span></div>`;
+        const cost=effCost(rec.k),ok=cost<=G.ap&&ACTIONS[rec.k].cdt<=0;
+        return `<div class="npbtn rec ${ok?'':'no'}" data-k="${rec.k}">
+          <span class="i">${rec.a.i}</span><div class="nm">${rec.a.n}
+          <small>反制 ${rec.name}</small></div><span class="cost">${cost} AP</span></div>`;
+      }).join('');
+    }
+    html+='<div class="npl">🔧 弱点 · 点击加固</div><div style="display:flex;flex-wrap:wrap">';
+    html+=s.vulns.length
+      ?s.vulns.map(v=>{const k=cardForVuln(v);
+        return `<span class="npv" data-k="${k}" title="点击施放 ${ACTIONS[k].n}">${VULN[v]} · ${ACTIONS[k].i}${effCost(k)}</span>`;
+      }).join('')
+      :'<span class="npv done">已全面加固</span>';
+    html+='</div>';
+    const defs=Object.keys(ACTIONS).filter(k=>k==='isolate'||validOn(id,k));
+    html+='<div class="npl">🛡 可用防御 · 点击施放</div>';
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">`;
+    html+=defs.map(k=>{
+      const a=ACTIONS[k],cost=effCost(k),ok=cost<=G.ap&&a.cdt<=0;
+      return `<div class="npbtn ${ok?'':'no'}" data-k="${k}" style="margin:0;padding:4px 6px">
+        <span class="i">${a.i}</span><div class="nm">${a.n}<small>${cost}AP${a.cdt>0?' · CD'+a.cdt.toFixed(1):''}</small></div></div>`;
+    }).join('')+'</div>';
+  }
+  p.innerHTML=html;p.classList.add('show');placeNodePanel();
+}
+$('#nodePanel').addEventListener('click',e=>{
+  if(e.target.closest('[data-npclose]')){hideNodePanel();return;}
+  const b=e.target.closest('[data-k]');if(!b||b.classList.contains('no')||!npOpen)return;
+  applyCard(npOpen,b.dataset.k);
+  npSig='';renderNodePanel();renderDev();updateCards();
+});
 function validOn(id,k){
   if(isExt(id))return false;
   if(k==='isolate')return true;
@@ -716,7 +1108,8 @@ function applyCard(id,k,costExtra=0){
   if(G.phase!=='wave'&&G.phase!=='prep')return;
   if(isExt(id)){toast('外部网络节点无法直接处置','warn');return;}
   if(a.cdt>0){toast(`${a.n} 冷却中（${a.cdt.toFixed(1)}s）`,'warn');return;}
-  const cost=a.cost+costExtra;
+  const discount=(k==='isolate'||k==='restore')?0:G.up.cheapen;
+  const cost=Math.max(1,a.cost+costExtra-discount);
   if(G.ap<cost){toast(`行动点不足（需 ${cost}）`,'warn');sfx(140,.1,'square',.03);return;}
 
   if(k==='isolate'){
@@ -781,50 +1174,69 @@ function updateArmHints(){
 
 /* ==================== 10. 波次 ==================== */
 function startGame(){
-  Object.assign(G,{t:0,wave:0,hp:120,ap:13,score:0,combo:0,attacks:[],queue:[],
-    ddosHold:0,paused:false,sel:null});
+  const D=DIFFICULTY[G.diff]||DIFFICULTY.normal;
+  Object.assign(G,{t:0,wave:0,hp:D.hp,hpMax:D.hp,ap:D.ap,apMax:D.ap,score:0,combo:0,
+    attacks:[],queue:[],ddosHold:0,paused:false,sel:null,auto:false,
+    up:freshUp(),upLog:[]});
   G.stats={comp:new Set(),dmg:{},leaks:0,holds:0,exfils:0,blocked:0,hardened:0,isolates:0,inv:0};
   NODES.forEach(n=>{const s=st[n.id];
     s.vulns=(VULNS[n.id]||[]).slice();s.comp=false;s.qUntil=0;s.nLat=0;s.latWave=0;s.nEx=0;s.exWave=0;});
   Object.keys(ACTIONS).forEach(k=>ACTIONS[k].cdt=0);
   G.attacks.slice().forEach(rmAtk);
-  $('#log').innerHTML='';
-  setArmed(null);
+  $('#log').innerHTML='';$('#achToast').innerHTML='';
+  lastFlash=-9999;lastFloat={};hideNodePanel();
+  setArmed(null);setSpeed(G.speed,true);$('#bAuto').classList.remove('on');
+  lastIntelKey='';
   G.paused=false;updatePauseBtn();
   G.phase='prep';G.prepT=30;
-  log('🔧 战前准备阶段：给关键设备加固弱点，30 秒后第一波攻击到来','ok');
-  hideOv();
+  log(`🔧 ${D.n}难度 · 战前准备：给关键设备加固弱点，30 秒后第一波攻击到来`,'ok');
+  SAVE.plays++;persist();
+  hideOv();renderIntel();
 }
 function startWave(){
   G.wave++;G.phase='wave';G.waveT=0;G.ap=G.apMax;
-  const pool=WAVE_POOL[G.wave-1],n=WAVE_ATK[G.wave-1];
-  const iv=Math.max(2.2,6.0-0.6*G.wave);
+  const pool=WAVE_POOL[G.wave-1];
+  const D=DIFFICULTY[G.diff];
+  const n=Math.max(3,Math.round(WAVE_ATK[G.wave-1]*D.atk));
+  const iv=Math.max(1.8,6.0-0.6*G.wave)/Math.sqrt(D.atk);
   G.queue=[];
   for(let i=0;i<n;i++)G.queue.push({t:i*iv+Math.random()*iv*0.4,type:rnd(pool)});
+  if(G.up.autoClean>0){
+    const lost=NODES.filter(x=>st[x.id].comp&&!isExt(x.id)).map(x=>x.id);
+    for(let i=0;i<G.up.autoClean&&lost.length;i++){
+      const id=lost.splice(Math.floor(Math.random()*lost.length),1)[0];
+      st[id].comp=false;G.stats.comp.delete(id);
+      floatTxt('自动净化','heal',id);
+      log(`🧹 自动编排：${byId[id].label} 已净化`,'ok');
+    }
+  }
   log(`⚔ 第 ${G.wave} 波攻击开始（${n} 项威胁）`,'bad');
   toast(`第 ${G.wave} 波攻击开始！`,'bad');
-  sfx(220,.3,'sawtooth',.055);
+  sfx(220,.3,'sawtooth',.055);renderIntel();
 }
 function endWave(){
-  const c=NODES.filter(n=>st[n.id].comp).length;
-  G.hp=Math.min(G.hpMax,G.hp+10);score(200);
-  log(`✅ 第 ${G.wave} 波防御成功（+10 完整度，+200 分）`,'ok');
+  const c=NODES.filter(x=>st[x.id].comp).length;
+  const heal=10+G.up.heal;
+  G.hp=Math.min(G.hpMax,G.hp+heal);score(200);
+  log(`✅ 第 ${G.wave} 波防御成功（+${heal} 完整度，+200 分）`,'ok');
+  floatTxt('+'+heal,'heal');
+  if(c===0)unlock('flawless');
   const pen=Math.min(c*2,14);
   if(pen>0){damage(pen);log(`⚠ 波次结算：${c} 台设备仍失陷（-${pen} 完整度）`,'warn');}
   if(G.phase==='over')return;          // 结算扣血已导致失败，不再判定胜利
   if(G.wave>=WAVE_COUNT){gameOver(true);return;}
-  G.phase='prep';G.prepT=25;
-  log(`🔧 进入准备阶段（25s），可提前开始下一波`,'ok');
+  showUpgrade();                        // 内部设置准备阶段，玩家选完强化才继续
+  log('🔧 进入准备阶段（25s），可随时提前开始下一波','ok');
 }
 function gameOver(win){
-  G.phase='over';G.attacks.slice().forEach(rmAtk);G.queue=[];
+  G.phase='over';hideNodePanel();G.attacks.slice().forEach(rmAtk);G.queue=[];
   setArmed(null);
   showResult(win);
 }
 
 /* ==================== 11. 主循环 ==================== */
 function update(dt){
-  const regen=(G.phase==='prep'?0.75:0.62)*(G.ddosHold>0?0.5:1);
+  const regen=(G.phase==='prep'?0.9:0.68)*(1+G.up.regen)*(G.ddosHold>0?0.5:1);
   G.ap=Math.min(G.apMax,G.ap+regen*dt);
   for(const k in ACTIONS)if(ACTIONS[k].cdt>0)ACTIONS[k].cdt=Math.max(0,ACTIONS[k].cdt-dt);
   if(G.ddosHold>0){G.ddosHold-=dt;damage(0.4*dt);}
@@ -900,12 +1312,15 @@ function render(){
   $('#bAp').style.width=(G.ap/G.apMax*100)+'%';
   $('#hScore').textContent=G.score;
   $('#hCombo').textContent='×'+comboMul().toFixed(1);
+  $('#hUp').textContent=G.upLog.length;
+  renderIntel();
   const pt=$('#phaseTag');
   if(G.phase==='prep'){pt.className='prep';pt.textContent=`准备中 ${Math.ceil(G.prepT)}s`;}
   else if(G.phase==='wave'){pt.className='wave';
     pt.textContent=`第 ${G.wave} 波交战中 · 剩余 ${G.queue.length+G.attacks.length}`;}
   else if(G.phase==='paused'){pt.className='';pt.textContent='已暂停';}
   else{pt.className='';pt.textContent='演练结束';}
+  $('#bStartWave').classList.toggle('show',G.phase==='prep');
 
   NODES.forEach(n=>{
     const s=st[n.id],v=NV[n.id];
@@ -966,6 +1381,11 @@ function render(){
   });
 
   updateThreatBars();updateCards();
+  if(npOpen){
+    const sig=nodeSig();
+    if(sig!==npSig){npSig=sig;renderNodePanel();}
+    else placeNodePanel();
+  }
 }
 function updateCards(){
   document.querySelectorAll('.card').forEach(c=>{
@@ -991,7 +1411,9 @@ function renderThreats(){
     if(a.hidden){
       actHtml=`<button class="th-act" data-act="hunt">🔎<b>调查 1</b></button>`;
     }else if(rec){
-      actHtml=`<button class="th-act" data-act="${rec.k}">${rec.a.i}<b>${rec.a.cost+1} AP</b></button>`;
+      const fee=G.up.noFee?0:1;
+      const dk=(rec.k==='isolate'||rec.k==='restore')?0:G.up.cheapen;
+      actHtml=`<button class="th-act" data-act="${rec.k}">${rec.a.i}<b>${Math.max(1,rec.a.cost+fee-dk)} AP</b></button>`;
     }else actHtml=`<button class="th-act" disabled>—<b>需研判</b></button>`;
     d.innerHTML=`
       <div class="th-ic">${showIcon}</div>
@@ -1014,7 +1436,7 @@ function renderThreats(){
         log(`🔎 调查完成，威胁已识别：${a.def.n}`,'ok');sfx(660,.12,'sine',.05);
         return;
       }
-      applyCard(a.path[a.hop],b.dataset.act,1);
+      applyCard(a.path[a.hop],b.dataset.act,G.up.noFee?0:1);
     });
     box.appendChild(d);
   });
@@ -1047,11 +1469,17 @@ function renderDev(){
   const q=s.qUntil>G.t,c=s.comp;
   let stateTxt=q?'🔒 已隔离':(c?'💀 已失陷':'✅ 正常');
   let stateCls=q?'':(c?'vk':'vs');
-  const vs=s.vulns.length?s.vulns.map(v=>`<span class="vchip">${VULN[v]}</span>`).join('')
-    :'<span class="vchip ok">已全面加固</span>';
+  const vs=s.vulns.length?s.vulns.map(v=>{
+    const k=cardForVuln(v);
+    return `<span class="vchip" data-v="${v}" data-k="${k}" title="点击施放 ${ACTIONS[k].n}">${VULN[v]}</span>`;
+  }).join(''):'<span class="vchip ok">已全面加固</span>';
   box.innerHTML=`<div class="nm">${n.icon} ${n.label}</div>
     <div class="mut">${CAT[n.cat]} · ${n.ip} · <span class="${stateCls}">${stateTxt}</span></div>
-    <div style="margin-top:4px">弱点：${vs}</div>`;
+    <div style="margin-top:4px">弱点（点击可施放）：${vs}</div>`;
+  box.querySelectorAll('.vchip[data-k]').forEach(el=>{
+    el.style.cursor='pointer';
+    el.onclick=()=>{applyCard(G.sel,el.dataset.k);renderDev();};
+  });
 }
 
 /* ==================== 13. 提示 / 卡片 ==================== */
@@ -1085,7 +1513,12 @@ function buildCards(){
     c.innerHTML=`<div class="cd"></div><div class="ck">${a.k}</div>
       <div class="ci">${a.i}</div><div class="cn">${a.n}</div>
       <div class="cc">${a.cost} AP${a.cd>1?' · CD'+a.cd+'s':''}</div>`;
-    c.addEventListener('click',()=>setArmed(G.armed===k?null:k));
+    c.addEventListener('click',()=>{
+      if(G.sel&&!isExt(G.sel)&&(G.phase==='wave'||G.phase==='prep')&&validOn(G.sel,k)){
+        applyCard(G.sel,k);renderDev();    // 已选节点 → 直接施放，免去往返
+        if(npOpen){npSig='';renderNodePanel();}
+      }else setArmed(G.armed===k?null:k);
+    });
     c.addEventListener('mouseenter',()=>{$('#cardTip').textContent=a.d;});
     box.appendChild(c);
   });
@@ -1095,28 +1528,42 @@ function buildCards(){
 function showOv(html){$('#ovBox').innerHTML=html;$('#ov').classList.add('show');}
 function hideOv(){$('#ov').classList.remove('show');}
 function showStart(){
+  const diffHtml=Object.entries(DIFFICULTY).map(([k,d])=>`
+    <div class="diff-card ${k===G.diff?'on':''}" data-diff="${k}">
+      <div class="dn">${d.n}</div><div class="dd">${d.desc}</div>
+    </div>`).join('');
   showOv(`<h2>🛡 SOC 攻防对抗演练</h2>
-  <p>你是一家企业的<b>安全管理员</b>。黑客正沿网络拓扑从外网逐跳渗透进来，
-  目标是数据库、文件服务器等核心资产。你有 <b>6 波攻击</b>要扛。</p>
+  <p>你是一家企业的<b>安全管理员</b>。黑客正沿网络拓扑从外网逐跳渗透，目标是数据库、文件服务器等核心资产。</p>
+  <h3>选择难度</h3>
+  <div class="diff-row">${diffHtml}</div>
   <h3>怎么玩</h3>
   <ul>
-    <li><b>备战阶段</b>（30s / 25s）：没有攻击，用行动点给设备<b>加固弱点</b>——弱点越少，后续攻击推进越慢。</li>
-    <li><b>交战阶段</b>：攻击沿虚线路径逐跳推进，每跳都要读条。读条满则该节点<b>失陷</b>，攻击继续深入。</li>
-    <li>选中一张<b>防御卡</b>（或按数字键），再点击目标节点即可施放。克制对了才能摧毁攻击。</li>
-    <li>也可以直接在右侧<b>威胁列表</b>点一键反制（便利性代价 +1 AP）。</li>
-    <li><b>前两跳几乎不掉血</b>（侦察期）。但勒索、0day、供应链这类会<b>沿途逐跳建立据点</b>，必须尽早拦！</li>
-    <li>失陷的设备会自发展开<b>横向移动</b>；数据库/文件服务器失陷后还会<b>数据外泄</b>。</li>
+    <li><b>备战阶段</b>：右上角<b>情报预警</b>透露下一波攻击类型；点 <b>🩹 智能加固</b> 可一键消除最关键弱点。</li>
+    <li>备战完毕点 <b>⚔ 提前开战</b> 直接进入交战，不必干等计时；也可用 <b>1×/2×/4×</b> 调节节奏。</li>
+    <li>点任意节点会在它<b>旁边弹出快捷面板</b>：弱点、当前威胁、可用防御都在一起，点一下就施放。右侧弱点标签和底部卡牌也可直接点击施放到已选节点。</li>
+    <li>选中<b>防御卡</b>（或按数字键）再点节点，可对多个节点连续施放同一张卡。</li>
+    <li><b>每波守住后三选一强化</b>，本局永久生效——这是逆风翻盘的关键。</li>
+    <li>前两跳为侦察期几乎不掉血，但勒索 / 0day / 供应链会<b>沿途建立据点</b>，必须尽早拦截。</li>
+    <li>失陷设备会<b>横向移动</b>，数据库 / 文件服务器失陷后还会<b>数据外泄</b>。</li>
   </ul>
   <h3>注意</h3>
   <ul>
-    <li>完整度归零即失败。扛过 6 波即胜利。</li>
-    <li>隔离主机是万能阻断，但核心设备被隔离会造成业务中断掉血。</li>
-    <li>IDS / SIEM / SOC 一旦失陷，你会<b>看不清</b>新攻击的类型，需花 1 AP 调查。</li>
+    <li>完整度归零即失败，扛过 6 波即胜利。IDS / SIEM / SOC 失陷会让攻击类型不明，需花 1 AP 调查。</li>
+    <li>隔离主机是万能阻断，但核心设备隔离会造成业务中断掉血。</li>
   </ul>
+  <div style="margin-top:12px;font-size:11.5px;color:var(--muted)">
+    🏆 历史最高 <b style="color:var(--accent)">${SAVE.best}</b> 分 · 通关 ${SAVE.wins} 次 ·
+    成就 ${SAVE.ach.length}/${Object.keys(ACHIEVEMENTS).length}
+  </div>
   <div class="btnrow">
     <button class="btn" onclick="startGame()">开始演练</button>
     <button class="btn gh" onclick="showManual()">📖 攻防手册</button>
   </div>`);
+  document.querySelectorAll('.diff-card').forEach(c=>c.onclick=()=>{
+    G.diff=c.dataset.diff;SAVE.diff=G.diff;persist();
+    document.querySelectorAll('.diff-card').forEach(x=>x.classList.toggle('on',x===c));
+    sfx(560,.08,'sine',.03);
+  });
 }
 function showManual(){
   const atkRows=Object.entries(ATTACKS).map(([k,a])=>
@@ -1141,6 +1588,16 @@ function showManual(){
 }
 function closeManual(){ backOv(); }
 function showResult(win){
+  if(win){
+    SAVE.wins++;
+    if(G.stats.exfils===0)unlock('noLeak');
+    if(G.diff==='hard'||G.diff==='insane')unlock('hardcore');
+    if(G.hp<20)unlock('survivor');
+  }
+  if(SAVE.best<G.score)SAVE.best=G.score;
+  if(G.score>=8000)unlock('rich');
+  if(G.stats.hardened>=30)unlock('collector');
+  persist();
   const s=G.stats;
   const dmgEnt=Object.entries(s.dmg).sort((a,b)=>b[1]-a[1]);
   const worst=dmgEnt.length?`${ATTACKS[dmgEnt[0][0]].i} ${ATTACKS[dmgEnt[0][0]].n}（${dmgEnt[0][1].toFixed(1)} 伤害）`:'无';
@@ -1172,9 +1629,14 @@ function showResult(win){
     <div><b>${s.exfils}</b>数据外泄成功次数</div>
     <div><b>${s.isolates}</b>隔离处置次数</div>
     <div><b>${s.inv}</b>无效处置次数</div>
+    <div><b>${SAVE.best}</b>历史最高分</div>
+    <div><b>${SAVE.ach.length}/${Object.keys(ACHIEVEMENTS).length}</b>成就进度</div>
   </div>
   <h3>最致命的攻击类型</h3><p>${worst}</p>
   <h3>建议优先加固</h3><p>${rec}</p>
+  <h3>本局强化</h3><p style="color:#d9c2ff">${G.upLog.length
+    ?G.upLog.map(id=>{const u=UPGRADES.find(x=>x.id===id);return u?u.i+' '+u.n:'';}).join('　')
+    :'无 —— 每波守住后别忘了选择强化'}</p>
   <div class="btnrow">
     <button class="btn" onclick="startGame()">再来一次</button>
     <button class="btn gh" onclick="showManual()">📖 查看手册</button>
@@ -1205,7 +1667,7 @@ window.addEventListener('mousemove',e=>{
 window.addEventListener('mouseup',()=>{drag=false;svg.classList.remove('grabbing');});
 svg.addEventListener('click',e=>{
   if(moved>6)return;
-  if(G.armed)setArmed(null);
+  if(G.armed)setArmed(null);else if(npOpen)hideNodePanel();
 });
 $('#bFs').onclick=()=>{
   if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
@@ -1229,6 +1691,8 @@ function showPauseOv(){
 let wasPaused=false;                       // 打开临时弹窗前的暂停状态，用于返回时还原
 function togglePause(){
   if(G.phase==='menu'||G.phase==='over')return;
+  if(G.paused&&G.phase==='wave'&&!G.queue.length&&!G.attacks.length
+    &&document.querySelector('.upgrade-card'))return;   // 强化选择中，必须先做选择
   G.paused=!G.paused;updatePauseBtn();
   if(G.paused)showPauseOv();else hideOv();
 }
@@ -1249,6 +1713,27 @@ $('#bManual').onclick=()=>{
   wasPaused=G.paused;
   if(G.phase!=='menu'&&G.phase!=='over'){G.paused=true;updatePauseBtn();}
   showManual();
+};
+function setSpeed(s,silent){
+  G.speed=s;
+  document.querySelectorAll('.spd').forEach(b=>b.classList.toggle('on',+b.dataset.spd===s));
+  if(silent)return;
+  const tip=$('#assistTip');
+  tip.textContent=`⏩ 游戏速度已切换为 ${s}×`;
+  tip.classList.add('show');
+  clearTimeout(setSpeed._t);
+  setSpeed._t=setTimeout(()=>tip.classList.remove('show'),1600);
+}
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  setSpeed(+b.dataset.spd);sfx(520,.07,'sine',.03);
+});
+$('#bAuto').onclick=()=>{
+  if(G.phase==='menu'||G.phase==='over'){toast('请先开始演练','warn');return;}
+  autoHarden();
+};
+$('#bStartWave').onclick=()=>{
+  if(G.phase!=='prep')return;
+  startWave();sfx(220,.26,'sawtooth',.05);
 };
 $('#bHint').onclick=function(){G.hint=!G.hint;this.classList.toggle('on',G.hint);renderThreats();};
 $('#bSfx').onclick=function(){G.sfx=!G.sfx;this.classList.toggle('on',G.sfx);};
@@ -1271,13 +1756,15 @@ window.addEventListener('keydown',e=>{
 });
 
 /* ==================== 17. 启动 ==================== */
-buildCards();renderThreats();renderDev();showStart();
+buildCards();renderThreats();renderDev();
+G.diff=SAVE.diff;showStart();setSpeed(G.speed,true);
 let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const raw=Math.min(60,now-last);last=now;
   if(!G.paused&&G.phase!=='menu'&&G.phase!=='over'){
-    G.t+=raw;update(raw/1000);
+    const step=raw*G.speed;
+    G.t+=step;update(step/1000);
     if(G.armed)updateArmHints();
   }
   render();
